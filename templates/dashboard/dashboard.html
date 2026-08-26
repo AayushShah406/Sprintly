@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Sprintly{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-container">
+  
+  <!-- Welcome & Quick Actions Hero -->
+  <div class="dashboard-hero-section">
+    <div>
+      <h1 class="hero-greeting">
+        <span>Welcome back, {{ current_user.display_name|default:'Team Member' }}</span>
+      </h1>
+      <p class="hero-subtitle">Here is what’s happening across your active projects and sprints today.</p>
+    </div>
+
+    <div class="quick-actions-bar">
+      <button class="btn-primary" onclick="SprintlyApp.openCreateIssueModal()">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i> Create Issue
+      </button>
+      <a href="{% url 'projects:list' %}" class="btn-secondary">
+        <i data-lucide="folder-plus" style="width:16px;height:16px;"></i> New Project
+      </a>
+      <a href="{% if active_project.id %}/projects/{{ active_project.id }}/sprints/{% else %}{% url 'projects:list' %}{% endif %}" class="btn-secondary">
+        <i data-lucide="zap" style="width:16px;height:16px;"></i> Plan Sprint
+      </a>
+      <a href="{% if active_project.id %}/projects/{{ active_project.id }}/backlog/{% else %}{% url 'projects:list' %}{% endif %}" class="btn-secondary">
+        <i data-lucide="layers" style="width:16px;height:16px;"></i> View Backlog
+      </a>
+    </div>
+  </div>
+
+  <!-- Key Metrics Row (Dynamic Counts) -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-header">
+        <span class="metric-label">Assigned to Me</span>
+        <div class="metric-icon-box" style="background:rgba(79, 70, 229, 0.1);color:#4f46e5;">
+          <i data-lucide="user-check" style="width:18px;height:18px;"></i>
+        </div>
+      </div>
+      <div class="metric-value">{{ total_assigned }}</div>
+      <div class="metric-subtext"><a href="{% url 'dashboard:my_work' %}">View my tasks →</a></div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-header">
+        <span class="metric-label">Due Soon (5 Days)</span>
+        <div class="metric-icon-box" style="background:rgba(245, 158, 11, 0.1);color:#f59e0b;">
+          <i data-lucide="clock" style="width:18px;height:18px;"></i>
+        </div>
+      </div>
+      <div class="metric-value" style="color:#d97706;">{{ total_due_soon }}</div>
+      <div class="metric-subtext">Requires attention</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-header">
+        <span class="metric-label">Overdue</span>
+        <div class="metric-icon-box" style="background:rgba(239, 68, 68, 0.1);color:#ef4444;">
+          <i data-lucide="alert-circle" style="width:18px;height:18px;"></i>
+        </div>
+      </div>
+      <div class="metric-value" style="color:#dc2626;">{{ total_overdue }}</div>
+      <div class="metric-subtext">Past target date</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-header">
+        <span class="metric-label">Completed Total</span>
+        <div class="metric-icon-box" style="background:rgba(16, 185, 129, 0.1);color:#10b981;">
+          <i data-lucide="check-circle" style="width:18px;height:18px;"></i>
+        </div>
+      </div>
+      <div class="metric-value" style="color:#059669;">{{ total_completed }}</div>
+      <div class="metric-subtext">Delivered items</div>
+    </div>
+  </div>
+
+  <!-- Main Dashboard 2-Column Layout -->
+  <div class="dashboard-content-layout">
+    <!-- Left Column: Active Sprint & My Tasks -->
+    <div class="dash-col-left">
+      <!-- Active Sprint Card -->
+      {% if active_sprint %}
+        <div class="dash-card">
+          <div class="dash-card-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="brand-icon" style="width:32px;height:32px;background:#4f46e5;">
+                <i data-lucide="zap" style="width:18px;height:18px;"></i>
+              </div>
+              <div>
+                <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);">{{ active_sprint.name }}</h3>
+                <span style="font-size:0.8rem;color:var(--text-secondary);">Goal: {{ active_sprint.goal }}</span>
+              </div>
+            </div>
+            <a href="/projects/{{ active_project.id|default:1 }}/board/" class="btn-secondary" style="font-size:0.8rem;padding:4px 10px;">
+              Open Board →
+            </a>
+          </div>
+
+          <div style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px;">
+              <span style="color:var(--text-secondary);">Sprint Delivery Progress</span>
+              <span style="font-weight:700;color:var(--text-primary);">{{ sprint_progress }}% ({{ sprint_health.completed_points|default:0 }}/{{ sprint_health.total_points|default:0 }} pts)</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" style="width:{{ sprint_progress }}%;background:var(--accent-primary);"></div>
+            </div>
+          </div>
+
+          <!-- 4 Mini Health Badges -->
+          <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;margin-top:16px;">
+            <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius-md);text-align:center;">
+              <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;">VELOCITY</div>
+              <div style="font-size:1.1rem;font-weight:800;color:#10b981;margin-top:2px;">{{ sprint_health.burndown_score|default:0 }}%</div>
+            </div>
+            <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius-md);text-align:center;">
+              <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;">SCOPE</div>
+              <div style="font-size:1.1rem;font-weight:800;color:#0284c7;margin-top:2px;">{{ sprint_health.scope_creep_score|default:100 }}%</div>
+            </div>
+            <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius-md);text-align:center;">
+              <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;">BOTTLENECKS</div>
+              <div style="font-size:1.1rem;font-weight:800;color:#f59e0b;margin-top:2px;">{{ sprint_health.bottleneck_score|default:0 }}%</div>
+            </div>
+            <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius-md);text-align:center;">
+              <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;">CONFIDENCE</div>
+              <div style="font-size:1.1rem;font-weight:800;color:#7c3aed;margin-top:2px;">{{ sprint_health.completion_probability|default:0 }}%</div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- My Assigned Tasks -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="check-square" style="width:18px;height:18px;color:#4f46e5;"></i>
+            <span>My Active Work</span>
+          </h3>
+          <a href="{% url 'dashboard:my_work' %}" style="font-size:0.8rem;color:var(--accent-primary);font-weight:600;">View all ({{ total_assigned }}) →</a>
+        </div>
+
+        <div class="task-list-container">
+          {% for issue in my_assigned_issues %}
+            <div class="task-row-item">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                <a href="{% url 'issues:detail' issue.id %}" style="font-weight:600;color:var(--text-primary);text-decoration:none;">
+                  <span style="color:var(--text-muted);font-size:0.8rem;margin-right:4px;">{{ issue.key }}</span>
+                  {{ issue.title }}
+                </a>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                <span class="status-pill status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+                {% if issue.due_date %}
+                  <span style="font-size:0.75rem;color:var(--text-secondary);"><i data-lucide="calendar" style="width:12px;height:12px;"></i> {{ issue.due_date|date:"M d" }}</span>
+                {% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <div class="empty-state-box">
+              <i data-lucide="check" style="width:32px;height:32px;color:#10b981;margin-bottom:8px;"></i>
+              <div style="font-weight:600;color:var(--text-primary);">All clear!</div>
+              <div style="font-size:0.8rem;color:var(--text-secondary);">You have no pending tickets assigned.</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Active Projects Catalog -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="folder" style="width:18px;height:18px;color:#0284c7;"></i>
+            <span>Active Projects</span>
+          </h3>
+          <a href="{% url 'projects:list' %}" style="font-size:0.8rem;color:var(--accent-primary);font-weight:600;">Browse all →</a>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:14px;">
+          {% for p in projects %}
+            <div class="project-mini-card">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div class="avatar-circle" style="background:{{ p.avatar_color }};width:28px;height:28px;font-size:0.75rem;">
+                    {{ p.key|slice:":2" }}
+                  </div>
+                  <a href="{% url 'projects:detail' p.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;">
+                    {{ p.name }}
+                  </a>
+                </div>
+                <span class="badge-priority priority-LOW">{{ p.key }}</span>
+              </div>
+              
+              <div style="margin-top:10px;font-size:0.8rem;color:var(--text-secondary);line-height:1.4;">
+                {{ p.description|default:"Enterprise agile workspace."|truncatewords:10 }}
+              </div>
+
+              <div style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">
+                  <span>Progress</span>
+                  <span>{{ p.progress_percentage }}%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width:{{ p.progress_percentage }}%;background:{{ p.avatar_color }};"></div>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="empty-state-box" style="grid-column:1/-1;padding:24px;text-align:center;">
+              <i data-lucide="folder-plus" style="width:32px;height:32px;color:var(--text-muted);margin-bottom:8px;"></i>
+              <div style="font-weight:700;color:var(--text-primary);">No active projects yet</div>
+              <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:2px;">Create your first project to start organizing tickets.</div>
+              <a href="{% url 'projects:list' %}" class="btn-primary" style="margin-top:12px;display:inline-flex;padding:6px 14px;font-size:0.8rem;text-decoration:none;">+ New Project</a>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Team Workload & Activity Feed -->
+    <div class="dash-col-right">
+      <!-- Team Capacity Widget -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="users" style="width:18px;height:18px;color:#7c3aed;"></i>
+            <span>Team Workload</span>
+          </h3>
+          <a href="{% if active_project.id %}/projects/{{ active_project.id }}/team/{% else %}{% url 'projects:list' %}{% endif %}" style="font-size:0.8rem;color:var(--accent-primary);font-weight:600;">Team Matrix →</a>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          {% for member in team_members %}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--border-subtle);">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="avatar-circle" style="background:{{ member.avatar_color }};width:32px;height:32px;font-size:0.8rem;">
+                  {{ member.initials }}
+                </div>
+                <div>
+                  <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary);">{{ member.display_name }}</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+                    <i data-lucide="shield" style="width:12px;height:12px;color:var(--accent-primary);"></i>
+                    {{ member.get_role_display }}
+                  </div>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <span class="badge-priority priority-MEDIUM">{{ member.active_tickets }} tasks</span>
+              </div>
+            </div>
+          {% empty %}
+            <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.85rem;">No team members yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Recent Activity Audit Feed -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="activity" style="width:18px;height:18px;color:#059669;"></i>
+            <span>Recent Activity</span>
+          </h3>
+          <a href="{% url 'dashboard:activity' %}" style="font-size:0.8rem;color:var(--accent-primary);font-weight:600;">Full Log →</a>
+        </div>
+
+        <div class="activity-timeline">
+          {% for log in recent_activity %}
+            <div class="activity-item">
+              <div class="activity-dot"></div>
+              <div class="activity-body">
+                <div style="font-size:0.85rem;color:var(--text-primary);">
+                  <strong>{{ log.actor.display_name|default:'System' }}</strong> {{ log.action }} on 
+                  <a href="{% url 'issues:detail' log.issue.id %}" style="color:var(--accent-primary);font-weight:600;text-decoration:none;">{{ log.issue.key }}</a>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+                  {{ log.created_at|timesince }} ago
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div style="font-size:0.85rem;color:var(--text-muted);text-align:center;padding:16px;">No recent events recorded.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

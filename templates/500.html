@@ -1,0 +1,23 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <title>System Error | Sprintly</title>
+  <link rel="stylesheet" href="{% static 'css/sprintly.css' %}">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-primary);">
+  <div class="auth-container-box" style="text-align:center;max-width:480px;">
+    <div style="font-size:3.5rem;font-weight:900;color:#f59e0b;line-height:1;">500</div>
+    <h1 style="font-size:1.4rem;font-weight:800;color:var(--text-primary);margin:12px 0 6px;">Something went wrong</h1>
+    <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.5;margin-bottom:20px;">
+      {{ message|default:"An unexpected condition occurred. Our technical operations team has been notified." }}
+    </p>
+    <a href="{% url 'dashboard:home' %}" class="btn-primary" style="display:inline-flex;">
+      <i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Return to Dashboard
+    </a>
+  </div>
+  <script>if (window.lucide) { window.lucide.createIcons(); }</script>
+</body>
+</html>

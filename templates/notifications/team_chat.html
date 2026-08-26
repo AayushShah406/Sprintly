@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Team Chat — {{ active_room.name|default:'General' }} | Sprintly{% endblock %}
+
+{% block content %}
+<div class="sprintly-main-inner" style="height:calc(100vh - 100px);display:flex;flex-direction:column;padding:0 24px 20px;">
+  
+  <!-- Chat App Container Grid -->
+  <div class="dash-card" style="flex:1;display:grid;grid-template-columns:260px 1fr;padding:0;overflow:hidden;border:1px solid var(--border-subtle);box-shadow:0 10px 25px rgba(0,0,0,0.08);">
+    
+    <!-- Left Navigation Sidebar -->
+    <div style="background:var(--bg-secondary);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;overflow-y:auto;">
+      
+      <!-- Channels Header -->
+      <div style="padding:16px 18px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:0.75rem;font-weight:800;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">
+          PROJECT CHANNELS
+        </span>
+        <span class="badge-priority priority-LOW" style="font-size:0.65rem;">{{ all_rooms.count }}</span>
+      </div>
+
+      <!-- Channels List -->
+      <div style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;">
+        {% for room in all_rooms %}
+          <a href="{% url 'notifications:room_chat' room.id %}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius-md);text-decoration:none;font-size:0.88rem;font-weight:600;transition:all 0.2s;{% if room.id == active_room.id %}background:rgba(79,70,229,0.15);color:var(--accent-primary);font-weight:800;{% else %}color:var(--text-secondary);{% endif %}" onmouseenter="if('{{ room.id }}' !== '{{ active_room.id }}') this.style.background='rgba(255,255,255,0.05)'" onmouseleave="if('{{ room.id }}' !== '{{ active_room.id }}') this.style.background='transparent'">
+            <span style="font-size:1.05rem;color:var(--text-muted);">#</span>
+            <span>{{ room.name }}</span>
+          </a>
+        {% empty %}
+          <div style="padding:10px;color:var(--text-muted);font-size:0.8rem;">No channels yet</div>
+        {% endfor %}
+      </div>
+
+      <!-- Direct Messages Header -->
+      <div style="padding:16px 18px 8px;margin-top:10px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:0.75rem;font-weight:800;letter-spacing:1px;color:var(--text-muted);text-transform:uppercase;">
+          TEAM DIRECT MESSAGES
+        </span>
+      </div>
+
+      <!-- Teammates List -->
+      <div style="padding:6px 12px 16px;display:flex;flex-direction:column;gap:4px;">
+        {% for mate in teammates %}
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:var(--radius-md);cursor:pointer;" onmouseenter="this.style.background='rgba(255,255,255,0.05)'" onmouseleave="this.style.background='transparent'">
+            <div style="position:relative;width:26px;height:26px;border-radius:50%;background:{{ mate.avatar_color|default:'#4f46e5' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;">
+              {{ mate.initials }}
+              <span style="position:absolute;bottom:-1px;right:-1px;width:7px;height:7px;border-radius:50%;background:#10b981;border:1.5px solid var(--bg-secondary);"></span>
+            </div>
+            <div style="min-width:0;flex:1;">
+              <div style="font-size:0.82rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                {{ mate.display_name }}
+              </div>
+              <div style="font-size:0.7rem;color:var(--text-muted);">{{ mate.title|default:mate.get_role_display }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right Main Chat Area -->
+    <div style="display:flex;flex-direction:column;background:var(--bg-card);min-width:0;">
+      
+      <!-- Chat Header -->
+      <div style="padding:14px 24px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;background:var(--bg-card);">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;font-weight:800;color:var(--text-primary);">#{{ active_room.name }}</span>
+          <span style="font-size:0.82rem;color:var(--text-muted);border-left:1px solid var(--border-subtle);padding-left:10px;">
+            {{ active_room.description|default:'Real-time team collaboration channel' }}
+          </span>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:700;color:#10b981;background:rgba(16,185,129,0.1);padding:4px 10px;border-radius:100px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:#10b981;"></span>
+          Real-Time Synced
+        </span>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="chatMessageStream" style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;">
+        {% for msg in chat_messages %}
+          <div class="chat-message-item" style="display:flex;align-items:flex-start;gap:12px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:{{ msg.author.avatar_color|default:'#4f46e5' }};color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:800;flex-shrink:0;">
+              {{ msg.author.initials }}
+            </div>
+            <div style="min-width:0;flex:1;">
+              <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px;">
+                <strong style="font-size:0.9rem;color:var(--text-primary);">{{ msg.author.display_name }}</strong>
+                <span class="type-badge-pill type-TASK" style="font-size:0.65rem;padding:1px 6px;">{{ msg.author.get_role_display }}</span>
+                <span style="font-size:0.75rem;color:var(--text-muted);">{{ msg.created_at|date:"h:i A" }}</span>
+              </div>
+              <div style="font-size:0.88rem;line-height:1.5;color:var(--text-secondary);word-break:break-word;background:var(--bg-secondary);padding:10px 14px;border-radius:8px 14px 14px 14px;display:inline-block;max-width:85%;border:1px solid var(--border-subtle);">
+                {{ msg.content }}
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div id="emptyChatPlaceholder" style="text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.9rem;">
+            <div style="width:52px;height:52px;border-radius:50%;background:rgba(79,70,229,0.1);display:inline-flex;align-items:center;justify-content:center;color:var(--accent-primary);margin-bottom:12px;">
+              <i data-lucide="message-square" style="width:24px;height:24px;"></i>
+            </div>
+            <h4 style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-bottom:4px;">Welcome to #{{ active_room.name }}!</h4>
+            <p style="font-size:0.85rem;margin:0;">This is the start of the #{{ active_room.name }} channel. Send a message to get started.</p>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Chat Input Box Form -->
+      <div style="padding:16px 24px;border-top:1px solid var(--border-subtle);background:var(--bg-card);">
+        <form id="chatForm" onsubmit="sendChatMessage(event)" style="display:flex;align-items:center;gap:12px;">
+          <input 
+            type="text" 
+            id="chatInputText" 
+            class="form-control" 
+            placeholder="Message #{{ active_room.name }} (Press Enter to send)..." 
+            autocomplete="off"
+            style="flex:1;height:44px;font-size:0.9rem;border-radius:10px;"
+          >
+          <button type="submit" class="btn-primary" style="height:44px;padding:0 20px;display:flex;align-items:center;gap:6px;">
+            <span>Send</span>
+            <i data-lucide="send" style="width:16px;height:16px;"></i>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const activeRoomId = "{{ active_room.id }}";
+  let lastMessageCount = {{ chat_messages|length }};
+
+  function scrollChatToBottom() {
+    const stream = document.getElementById("chatMessageStream");
+    if (stream) {
+      stream.scrollTop = stream.scrollHeight;
+    }
+  }
+
+  async function sendChatMessage(e) {
+    e.preventDefault();
+    const input = document.getElementById("chatInputText");
+    const content = input.value.trim();
+    if (!content || !activeRoomId) return;
+
+    input.value = "";
+
+    try {
+      const res = await fetch(`/api/notifications/chat/rooms/${activeRoomId}/messages/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": SprintlyApp.getCsrfToken()
+        },
+        body: JSON.stringify({ content: content })
+      });
+      const data = await res.json();
+      if (data.success && data.message) {
+        appendChatMessage(data.message);
+      }
+    } catch (err) {
+      console.warn("Chat error:", err);
+    }
+  }
+
+  function appendChatMessage(msg) {
+    const stream = document.getElementById("chatMessageStream");
+    const placeholder = document.getElementById("emptyChatPlaceholder");
+    if (placeholder) placeholder.remove();
+
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "chat-message-item";
+    msgDiv.style.cssText = "display:flex;align-items:flex-start;gap:12px;";
+    msgDiv.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:50%;background:${msg.author_avatar_color || '#4f46e5'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:800;flex-shrink:0;">
+        ${msg.author_initials || 'U'}
+      </div>
+      <div style="min-width:0;flex:1;">
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px;">
+          <strong style="font-size:0.9rem;color:var(--text-primary);">${msg.author_name}</strong>
+          <span class="type-badge-pill type-TASK" style="font-size:0.65rem;padding:1px 6px;">${msg.author_role || 'Member'}</span>
+          <span style="font-size:0.75rem;color:var(--text-muted);">${msg.created_at}</span>
+        </div>
+        <div style="font-size:0.88rem;line-height:1.5;color:var(--text-secondary);word-break:break-word;background:var(--bg-secondary);padding:10px 14px;border-radius:8px 14px 14px 14px;display:inline-block;max-width:85%;border:1px solid var(--border-subtle);">
+          ${msg.content}
+        </div>
+      </div>
+    `;
+    stream.appendChild(msgDiv);
+    scrollChatToBottom();
+  }
+
+  async function pollRoomMessages() {
+    if (!activeRoomId) return;
+    try {
+      const res = await fetch(`/api/notifications/chat/rooms/${activeRoomId}/messages/`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.messages && data.messages.length > lastMessageCount) {
+        const stream = document.getElementById("chatMessageStream");
+        const placeholder = document.getElementById("emptyChatPlaceholder");
+        if (placeholder) placeholder.remove();
+        
+        let html = "";
+        data.messages.forEach(msg => {
+          html += `
+            <div class="chat-message-item" style="display:flex;align-items:flex-start;gap:12px;">
+              <div style="width:36px;height:36px;border-radius:50%;background:${msg.author_avatar_color || '#4f46e5'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:800;flex-shrink:0;">
+                ${msg.author_initials || 'U'}
+              </div>
+              <div style="min-width:0;flex:1;">
+                <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px;">
+                  <strong style="font-size:0.9rem;color:var(--text-primary);">${msg.author_name}</strong>
+                  <span class="type-badge-pill type-TASK" style="font-size:0.65rem;padding:1px 6px;">${msg.author_role || 'Member'}</span>
+                  <span style="font-size:0.75rem;color:var(--text-muted);">${msg.created_at}</span>
+                </div>
+                <div style="font-size:0.88rem;line-height:1.5;color:var(--text-secondary);word-break:break-word;background:var(--bg-secondary);padding:10px 14px;border-radius:8px 14px 14px 14px;display:inline-block;max-width:85%;border:1px solid var(--border-subtle);">
+                  ${msg.content}
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        stream.innerHTML = html;
+        lastMessageCount = data.messages.length;
+        scrollChatToBottom();
+      }
+    } catch (e) {
+      console.warn("Poll error:", e);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    scrollChatToBottom();
+    setInterval(pollRoomMessages, 3000);
+  });
+</script>
+{% endblock %}

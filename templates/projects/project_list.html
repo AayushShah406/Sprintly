@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Projects Directory | Sprintly{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-container">
+  
+  <div class="view-header">
+    <div class="view-title-group">
+      <h1>
+        <i data-lucide="folder" style="width:26px;height:26px;color:#0284c7;"></i>
+        <span>Projects Directory</span>
+      </h1>
+      <div class="view-subtitle">Browse, manage, and configure your agile team workspaces.</div>
+    </div>
+
+    <button class="btn-primary" onclick="SprintlyApp.openCreateProjectModal()">
+      <i data-lucide="plus" style="width:16px;height:16px;"></i>
+      <span>New Project</span>
+    </button>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="filter-toolbar" style="margin:20px 0;">
+    <form method="GET" style="display:flex;align-items:center;gap:12px;width:100%;flex-wrap:wrap;">
+      <div style="flex:1;min-width:240px;position:relative;">
+        <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:10px;color:var(--text-muted);"></i>
+        <input type="text" name="search" class="search-input" value="{{ search }}" placeholder="Search by name, key, or description..." style="width:100%;padding-left:32px;">
+      </div>
+
+      <select name="status" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
+        <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>Completed</option>
+      </select>
+
+      <select name="owner" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Leads / Owners</option>
+        {% for o in owners %}
+          <option value="{{ o.id }}" {% if owner_filter == o.id|stringformat:"i" %}selected{% endif %}>{{ o.display_name }}</option>
+        {% endfor %}
+      </select>
+
+      <select name="sort" class="filter-select" onchange="this.form.submit()">
+        <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>Newest First</option>
+        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Project Name A-Z</option>
+        <option value="key" {% if sort_by == 'key' %}selected{% endif %}>Project Key</option>
+      </select>
+
+      <noscript><button type="submit" class="btn-secondary">Apply</button></noscript>
+    </form>
+  </div>
+
+  <!-- Projects Grid -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:20px;">
+    {% for p in projects %}
+      <div class="project-card-full">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="avatar-circle" style="background:{{ p.avatar_color }};width:40px;height:40px;font-size:0.95rem;border-radius:var(--radius-md);">
+              {{ p.key }}
+            </div>
+            <div>
+              <a href="{% url 'projects:detail' p.id %}" style="font-size:1.1rem;font-weight:800;color:var(--text-primary);text-decoration:none;">
+                {{ p.name }}
+              </a>
+              <div style="font-size:0.8rem;color:var(--text-muted);">Lead: {{ p.lead.display_name|default:p.owner.display_name }}</div>
+            </div>
+          </div>
+          <span class="status-pill status-{{ p.status }}">{{ p.status }}</span>
+        </div>
+
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin:14px 0;line-height:1.5;">
+          {{ p.description|default:"Enterprise agile workspace."|truncatewords:18 }}
+        </p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:10px 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);margin-bottom:12px;text-align:center;">
+          <div>
+            <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;">ISSUES</div>
+            <div style="font-size:1rem;font-weight:800;color:var(--text-primary);margin-top:2px;">{{ p.total_issues_count }}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;">MEMBERS</div>
+            <div style="font-size:1rem;font-weight:800;color:var(--text-primary);margin-top:2px;">{{ p.memberships.count }}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;">PROGRESS</div>
+            <div style="font-size:1rem;font-weight:800;color:#10b981;margin-top:2px;">{{ p.progress_percentage }}%</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.8rem;">
+          <span style="color:var(--text-muted);">
+            Active Sprint: <strong>{{ p.active_sprint.name|default:'None' }}</strong>
+          </span>
+          <a href="{% url 'projects:detail' p.id %}" style="color:var(--accent-primary);font-weight:700;text-decoration:none;">Open Project →</a>
+        </div>
+      </div>
+    {% empty %}
+      <div class="empty-state-box" style="grid-column:1/-1;">
+        <i data-lucide="folder" style="width:48px;height:48px;color:var(--text-muted);margin-bottom:12px;"></i>
+        <h3 style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">No Projects Found</h3>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">Try adjusting your search criteria or create a new project workspace.</p>
+        <button class="btn-primary" style="margin-top:14px;" onclick="SprintlyApp.openCreateProjectModal()">Create Project</button>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- Create Project Modal -->
+<div id="createProjectModal" class="modal-overlay">
+  <div class="modal-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-primary);">Create Project</h2>
+      <button class="btn-icon" onclick="SprintlyApp.closeAllModals()"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+    </div>
+
+    <form method="POST">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Project Name *</label>
+        <input type="text" name="name" class="form-control" placeholder="e.g. Identity & Access Gateway" required>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="form-group">
+          <label class="form-label">Project Key (2-6 letters) *</label>
+          <input type="text" name="key" class="form-control" placeholder="e.g. IAG" maxlength="10" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input type="text" name="category" class="form-control" value="Software Engineering">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" rows="3" placeholder="Describe project scope and goals..."></textarea>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+        <button type="button" class="btn-secondary" onclick="SprintlyApp.closeAllModals()">Cancel</button>
+        <button type="submit" class="btn-primary">Create Workspace</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

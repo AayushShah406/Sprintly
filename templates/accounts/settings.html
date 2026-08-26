@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}User Settings | Sprintly{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-container" style="max-width:750px;margin:0 auto;">
+  
+  <div class="view-header" style="margin-bottom:20px;">
+    <div class="view-title-group">
+      <h1>
+        <i data-lucide="settings" style="width:26px;height:26px;color:#4f46e5;"></i>
+        <span>User Preferences & Settings</span>
+      </h1>
+      <div class="view-subtitle">Configure theme appearance, timezone, and notification rules.</div>
+    </div>
+  </div>
+
+  <div class="dash-card">
+    <form method="POST">
+      {% csrf_token %}
+      
+      <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin-bottom:14px;">Appearance Theme</h3>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid {% if current_user.theme_preference == 'light' %}var(--accent-primary){% else %}var(--border-subtle){% endif %};border-radius:var(--radius-md);cursor:pointer;">
+          <input type="radio" name="theme_preference" value="light" {% if current_user.theme_preference == 'light' %}checked{% endif %}>
+          <div>
+            <div style="font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+              <i data-lucide="sun" style="width:16px;height:16px;color:#f59e0b;"></i>
+              <span>Light Theme (Default)</span>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Crisp borders & modern pastel badges</div>
+          </div>
+        </label>
+
+        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid {% if current_user.theme_preference == 'dark' %}var(--accent-primary){% else %}var(--border-subtle){% endif %};border-radius:var(--radius-md);cursor:pointer;">
+          <input type="radio" name="theme_preference" value="dark" {% if current_user.theme_preference == 'dark' %}checked{% endif %}>
+          <div>
+            <div style="font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+              <i data-lucide="moon" style="width:16px;height:16px;color:#818cf8;"></i>
+              <span>Dark Theme</span>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">Sleek dark slate workspace</div>
+          </div>
+        </label>
+      </div>
+
+      <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin:24px 0 14px;border-top:1px solid var(--border-subtle);padding-top:18px;">
+        Localization & Timezone
+      </h3>
+
+      <div class="form-group">
+        <label class="form-label">Timezone</label>
+        <select name="timezone" class="form-control">
+          <option value="UTC" {% if current_user.timezone == 'UTC' %}selected{% endif %}>UTC (Coordinated Universal Time)</option>
+          <option value="America/New_York" {% if current_user.timezone == 'America/New_York' %}selected{% endif %}>America/New_York (EST/EDT)</option>
+          <option value="America/Los_Angeles" {% if current_user.timezone == 'America/Los_Angeles' %}selected{% endif %}>America/Los_Angeles (PST/PDT)</option>
+          <option value="Europe/London" {% if current_user.timezone == 'Europe/London' %}selected{% endif %}>Europe/London (GMT/BST)</option>
+          <option value="Asia/Tokyo" {% if current_user.timezone == 'Asia/Tokyo' %}selected{% endif %}>Asia/Tokyo (JST)</option>
+        </select>
+      </div>
+
+      <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin:24px 0 14px;border-top:1px solid var(--border-subtle);padding-top:18px;">
+        Email Notifications
+      </h3>
+
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;color:var(--text-primary);">
+        <input type="checkbox" name="email_notifications_enabled" value="1" {% if current_user.email_notifications_enabled %}checked{% endif %}>
+        <span>Receive email notifications for ticket assignments and mentions</span>
+      </label>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:24px;">
+        <button type="submit" class="btn-primary">Save Preferences</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

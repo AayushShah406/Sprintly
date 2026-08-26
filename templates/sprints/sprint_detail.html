@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{{ sprint.name }} | Sprintly{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-container">
+  
+  <div class="view-header">
+    <div class="view-title-group">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="status-pill status-{{ sprint.status }}">{{ sprint.status }}</span>
+        <h1>{{ sprint.name }}</h1>
+      </div>
+      <div class="view-subtitle">Project: <strong>{{ project.name }} ({{ project.key }})</strong> • Goal: <strong>{{ sprint.goal }}</strong></div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      {% if sprint.status == 'PLANNING' %}
+        <form method="POST" action="{% url 'sprints:start' sprint.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-primary"><i data-lucide="play" style="width:16px;height:16px;"></i> Start Sprint</button>
+        </form>
+      {% elif sprint.status == 'ACTIVE' %}
+        <button class="btn-primary" onclick="document.getElementById('completeSprintModal').classList.add('active');">
+          <i data-lucide="check-circle" style="width:16px;height:16px;"></i> Complete Sprint
+        </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Sprint Progress & Metrics -->
+  <div class="metrics-grid" style="margin-top:20px;">
+    <div class="metric-card">
+      <div class="metric-header"><span class="metric-label">Committed Points</span><i data-lucide="zap" style="width:18px;height:18px;color:#4f46e5;"></i></div>
+      <div class="metric-value">{{ total_pts }} pts</div>
+      <div class="metric-subtext">{{ issues.count }} total tickets</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-header"><span class="metric-label">Completed Points</span><i data-lucide="check-circle" style="width:18px;height:18px;color:#10b981;"></i></div>
+      <div class="metric-value" style="color:#10b981;">{{ done_pts }} pts</div>
+      <div class="metric-subtext">{{ progress_pct }}% velocity burn</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-header"><span class="metric-label">Remaining Points</span><i data-lucide="clock" style="width:18px;height:18px;color:#f59e0b;"></i></div>
+      <div class="metric-value" style="color:#f59e0b;">{{ remaining_pts }} pts</div>
+      <div class="metric-subtext">To be delivered</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-header"><span class="metric-label">Sprint Health Index</span><i data-lucide="activity" style="width:18px;height:18px;color:#7c3aed;"></i></div>
+      <div class="metric-value" style="color:#7c3aed;">{{ health_data.health_score|default:88 }}/100</div>
+      <div class="metric-subtext">{{ health_data.status_label|default:'Healthy' }}</div>
+    </div>
+  </div>
+
+  <!-- Sprint Issues List -->
+  <div class="dash-card" style="margin-top:24px;">
+    <div class="dash-card-header">
+      <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);">Sprint Issues ({{ issues.count }})</h3>
+      <a href="/projects/{{ project.id }}/board/" class="btn-secondary" style="font-size:0.8rem;padding:4px 10px;">Open Kanban Board →</a>
+    </div>
+
+    <div class="task-list-container">
+      {% for issue in issues %}
+        <div class="task-row-item">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+            <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;">
+              {{ issue.key }} - {{ issue.title }}
+            </a>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="badge-points">{{ issue.story_points }} pts</span>
+            <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+            <span class="status-pill status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+          </div>
+        </div>
+      {% empty %}
+        <div style="padding:16px;color:var(--text-muted);text-align:center;">No issues in this sprint yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Complete Sprint Modal -->
+<div id="completeSprintModal" class="modal-overlay">
+  <div class="modal-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-primary);">Complete {{ sprint.name }}</h2>
+      <button class="btn-icon" onclick="document.getElementById('completeSprintModal').classList.remove('active');"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+    </div>
+
+    <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:16px;">
+      This sprint contains <strong>{{ remaining_pts }} story points</strong> of incomplete work. Where would you like to move incomplete issues?
+    </p>
+
+    <form method="POST" action="{% url 'sprints:complete' sprint.id %}">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Move Incomplete Issues To:</label>
+        <select name="target_sprint_id" class="form-control">
+          <option value="backlog">Product Backlog (Unassigned)</option>
+          {% for next_s in future_sprints %}
+            <option value="{{ next_s.id }}">{{ next_s.name }} (Planned)</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('completeSprintModal').classList.remove('active');">Cancel</button>
+        <button type="submit" class="btn-primary">Confirm & Complete Sprint</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

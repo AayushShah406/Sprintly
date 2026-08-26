@@ -1,0 +1,11 @@
+{
+  "include": [
+    "apps",
+    "config"
+  ],
+  "exclude": [
+    "venv"
+  ],
+  "venvPath": ".",
+  "venv": "venv"
+}

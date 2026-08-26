@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile | Sprintly{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-container" style="max-width:750px;margin:0 auto;">
+  
+  <div class="view-header" style="margin-bottom:20px;">
+    <div class="view-title-group">
+      <h1>
+        <i data-lucide="user" style="width:26px;height:26px;color:#4f46e5;"></i>
+        <span>User Profile & Security</span>
+      </h1>
+      <div class="view-subtitle">Manage personal account details and password security.</div>
+    </div>
+
+    <a href="{% url 'accounts:logout' %}" class="btn-secondary" style="color:#dc2626;border-color:#fecaca;">
+      <i data-lucide="log-out" style="width:16px;height:16px;"></i> Log Out
+    </a>
+  </div>
+
+  <div class="dash-card" style="margin-bottom:24px;">
+    <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-bottom:16px;">Personal Information</h3>
+
+    <form method="POST">
+      {% csrf_token %}
+      
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+        <div class="avatar-circle" style="background:{{ current_user.avatar_color }};width:56px;height:56px;font-size:1.3rem;">
+          {{ current_user.initials }}
+        </div>
+        <div>
+          <div style="font-weight:800;font-size:1.1rem;color:var(--text-primary);">{{ current_user.display_name }}</div>
+          <div style="font-size:0.85rem;color:var(--text-secondary);">@{{ current_user.username }} • {{ current_user.email }}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name" class="form-control" value="{{ current_user.first_name }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name" class="form-control" value="{{ current_user.last_name }}">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Professional Title</label>
+          <input type="text" name="title" class="form-control" value="{{ current_user.title }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Avatar Color</label>
+          <select name="avatar_color" class="form-control">
+            <option value="#4f46e5" {% if current_user.avatar_color == '#4f46e5' %}selected{% endif %}>Indigo</option>
+            <option value="#7c3aed" {% if current_user.avatar_color == '#7c3aed' %}selected{% endif %}>Purple</option>
+            <option value="#0284c7" {% if current_user.avatar_color == '#0284c7' %}selected{% endif %}>Ocean Blue</option>
+            <option value="#059669" {% if current_user.avatar_color == '#059669' %}selected{% endif %}>Emerald Green</option>
+            <option value="#db2777" {% if current_user.avatar_color == '#db2777' %}selected{% endif %}>Pink</option>
+          </select>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin:24px 0 14px;border-top:1px solid var(--border-subtle);padding-top:18px;">
+        Change Password
+      </h3>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Current Password</label>
+          <input type="password" name="old_password" class="form-control" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" name="new_password" class="form-control" placeholder="••••••••">
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+        <button type="submit" class="btn-primary">Save Profile & Password</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

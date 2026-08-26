@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprintly — Enterprise Agile Intelligence & Project Platform</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Global Design System -->
+  <link rel="stylesheet" href="/static/css/sprintly.css">
+
+  <style>
+    /* ==========================================================================
+       SAAS HOMEPAGE HIGH-CONTRAST DUAL-THEME ENGINE
+       ========================================================================== */
+    :root {
+      --saas-primary: #4f46e5;
+      --saas-primary-hover: #4338ca;
+      --saas-gradient-light: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #0284c7 100%);
+      --saas-gradient-dark: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #38bdf8 100%);
+    }
+
+    [data-theme="light"] {
+      --lp-bg: #f8fafc;
+      --lp-header-bg: rgba(255, 255, 255, 0.92);
+      --lp-text-title: #0f172a;
+      --lp-text-body: #334155;
+      --lp-text-muted: #64748b;
+      --lp-hero-gradient-text: var(--saas-gradient-light);
+      --lp-hero-bg: radial-gradient(circle at 50% -10%, rgba(79, 70, 229, 0.12) 0%, rgba(248, 250, 252, 0) 70%);
+      --lp-card-bg: #ffffff;
+      --lp-card-border: #e2e8f0;
+      --lp-section-bg: #f1f5f9;
+      --lp-window-topbar: #f8fafc;
+      --lp-window-viewport: #ffffff;
+      --lp-subcard-bg: #f8fafc;
+      --lp-subcard-border: #e2e8f0;
+      --lp-shadow-window: 0 20px 45px -10px rgba(0, 0, 0, 0.1), 0 0 25px rgba(79, 70, 229, 0.08);
+      --lp-shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --lp-btn-secondary-bg: #ffffff;
+      --lp-btn-secondary-border: #cbd5e1;
+      --lp-btn-secondary-text: #0f172a;
+    }
+
+    [data-theme="dark"] {
+      --lp-bg: #090d16;
+      --lp-header-bg: rgba(9, 13, 22, 0.92);
+      --lp-text-title: #f8fafc;
+      --lp-text-body: #94a3b8;
+      --lp-text-muted: #64748b;
+      --lp-hero-gradient-text: var(--saas-gradient-dark);
+      --lp-hero-bg: radial-gradient(circle at 50% -10%, rgba(99, 102, 241, 0.22) 0%, rgba(9, 13, 22, 0) 70%);
+      --lp-card-bg: #141d2e;
+      --lp-card-border: rgba(255, 255, 255, 0.08);
+      --lp-section-bg: #0d1320;
+      --lp-window-topbar: #0f172a;
+      --lp-window-viewport: #090d16;
+      --lp-subcard-bg: #151e30;
+      --lp-subcard-border: rgba(255, 255, 255, 0.06);
+      --lp-shadow-window: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 35px rgba(99, 102, 241, 0.2);
+      --lp-shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --lp-btn-secondary-bg: #141d2e;
+      --lp-btn-secondary-border: rgba(255, 255, 255, 0.12);
+      --lp-btn-secondary-text: #f8fafc;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--lp-bg);
+      color: var(--lp-text-body);
+      overflow-x: hidden;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+      color: var(--lp-text-title);
+    }
+
+    /* Sticky SaaS Top Navigation */
+    .landing-header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: var(--lp-header-bg);
+      border-bottom: 1px solid var(--lp-card-border);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.25s ease;
+    }
+
+    .landing-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .landing-nav-links a {
+      color: var(--lp-text-body);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .landing-nav-links a:hover {
+      color: var(--saas-primary);
+    }
+
+    /* Hero Section */
+    .hero-section {
+      position: relative;
+      padding: 80px 24px 60px;
+      text-align: center;
+      background: var(--lp-hero-bg);
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      background: rgba(79, 70, 229, 0.12);
+      border: 1px solid rgba(79, 70, 229, 0.25);
+      color: var(--saas-primary);
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-title {
+      font-size: clamp(2.6rem, 5.5vw, 4.4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -1.8px;
+      margin: 0 auto 20px;
+      max-width: 920px;
+      color: var(--lp-text-title);
+    }
+
+    .hero-gradient-text {
+      background: var(--lp-hero-gradient-text);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      line-height: 1.6;
+      color: var(--lp-text-body);
+      max-width: 700px;
+      margin: 0 auto 36px;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .btn-hero-primary {
+      background: var(--saas-gradient-light);
+      color: #ffffff;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(79, 70, 229, 0.35);
+      transition: all 0.25s ease;
+    }
+
+    .btn-hero-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 32px rgba(79, 70, 229, 0.5);
+    }
+
+    .btn-hero-secondary {
+      background: var(--lp-btn-secondary-bg);
+      color: var(--lp-btn-secondary-text);
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--lp-btn-secondary-border);
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+      transition: all 0.25s ease;
+    }
+
+    .btn-hero-secondary:hover {
+      border-color: var(--saas-primary);
+      transform: translateY(-2px);
+    }
+
+    /* Dummy Showcase Frame */
+    .dashboard-preview-wrapper {
+      max-width: 1180px;
+      margin: 0 auto 100px;
+      padding: 0 20px;
+    }
+
+    .dummy-window-frame {
+      background: var(--lp-card-bg);
+      border: 1px solid var(--lp-card-border);
+      border-radius: 20px;
+      box-shadow: var(--lp-shadow-window);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .dummy-window-topbar {
+      padding: 14px 20px;
+      background: var(--lp-window-topbar);
+      border-bottom: 1px solid var(--lp-card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .dummy-window-dots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dummy-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .dummy-tabs-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--lp-card-bg);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--lp-card-border);
+    }
+
+    .dummy-tab-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--lp-text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .dummy-tab-btn.active {
+      background: var(--saas-primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+    }
+
+    .dummy-preview-viewport {
+      min-height: 480px;
+      padding: 24px;
+      background: var(--lp-window-viewport);
+      transition: background-color 0.25s ease;
+    }
+
+    .dummy-card {
+      background: var(--lp-subcard-bg);
+      border: 1px solid var(--lp-subcard-border);
+      border-radius: 10px;
+      padding: 12px;
+      color: var(--lp-text-title);
+      box-shadow: var(--lp-shadow-card);
+      transition: all 0.2s ease;
+    }
+
+    /* Features Section */
+    .features-section {
+      padding: 90px 24px;
+      background: var(--lp-section-bg);
+      border-top: 1px solid var(--lp-card-border);
+      border-bottom: 1px solid var(--lp-card-border);
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 60px;
+    }
+
+    .section-title {
+      font-size: 2.3rem;
+      font-weight: 900;
+      letter-spacing: -0.8px;
+      margin-bottom: 14px;
+      color: var(--lp-text-title);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 28px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: var(--lp-card-bg);
+      border: 1px solid var(--lp-card-border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      box-shadow: var(--lp-shadow-card);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--saas-primary);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+    }
+
+    .feature-icon-wrapper {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(79, 70, 229, 0.12);
+      color: var(--saas-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    /* FAQ Accordion */
+    .faq-section {
+      padding: 80px 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      background: var(--lp-card-bg);
+      border: 1px solid var(--lp-card-border);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      box-shadow: var(--lp-shadow-card);
+    }
+
+    .faq-question {
+      padding: 18px 24px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--lp-text-title);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    .faq-answer {
+      padding: 0 24px 18px;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: var(--lp-text-body);
+      display: none;
+    }
+
+    .faq-item.open .faq-answer {
+      display: block;
+    }
+
+    /* Footer */
+    .landing-footer {
+      border-top: 1px solid var(--lp-card-border);
+      padding: 60px 32px 30px;
+      background: var(--lp-section-bg);
+      color: var(--lp-text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Top SaaS Sticky Header -->
+  <header class="landing-header">
+    <div style="display:flex;align-items:center;gap:32px;">
+      <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--lp-text-title);">
+        <div style="width:36px;height:36px;border-radius:10px;background:var(--saas-gradient-light);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 12px rgba(79,70,229,0.4);">
+          <i data-lucide="zap" style="width:20px;height:20px;"></i>
+        </div>
+        <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.5px;">Sprintly</span>
+      </a>
+
+      <nav class="landing-nav-links">
+        <a href="#preview">Live Demo</a>
+        <a href="#features">Features</a>
+        <a href="#security">Cyber Security</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:14px;">
+      <!-- Theme Switcher Button -->
+      <button 
+        id="landingThemeToggle" 
+        onclick="toggleLandingTheme()" 
+        title="Toggle Light/Dark Theme"
+        style="width:40px;height:40px;border-radius:10px;border:1px solid var(--lp-card-border);background:var(--lp-card-bg);color:var(--lp-text-title);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;box-shadow:var(--lp-shadow-card);"
+      >
+        <i id="landingThemeIcon" data-lucide="sun" style="width:18px;height:18px;"></i>
+      </button>
+
+      {% if is_authenticated %}
+        <a href="{% url 'dashboard:home' %}" class="btn-primary" style="padding:9px 18px;font-size:0.88rem;display:inline-flex;align-items:center;gap:6px;">
+          <i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i>
+          <span>Go to Workspace</span>
+        </a>
+      {% else %}
+        <a href="{% url 'accounts:login' %}" class="btn-secondary" style="padding:9px 16px;font-size:0.88rem;">Sign In</a>
+        <a href="{% url 'accounts:signup' %}" class="btn-primary" style="padding:9px 18px;font-size:0.88rem;display:inline-flex;align-items:center;gap:6px;">
+          <span>Get Started Free</span>
+          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+        </a>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- 2. Hero Section -->
+  <section class="hero-section">
+    <div class="hero-badge">
+      <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+      <span>Next-Gen Agile Intelligence • AI Workload Balancing & Gantt Roadmaps</span>
+    </div>
+
+    <h1 class="hero-title">
+      Sprint Faster. <br>
+      <span class="hero-gradient-text">Ship Smarter with AI.</span>
+    </h1>
+
+    <p class="hero-subtitle">
+      The complete modern platform with drag-and-drop Kanban boards, live-updating Gantt chart roadmaps, automated AI task allocation, real-time team chat, and enterprise cyber threat immunity.
+    </p>
+
+    <div class="hero-cta-group">
+      <a href="{% url 'accounts:signup' %}" class="btn-hero-primary">
+        <i data-lucide="rocket" style="width:18px;height:18px;"></i>
+        <span>Launch Live Workspace</span>
+      </a>
+      <a href="#preview" class="btn-hero-secondary">
+        <i data-lucide="play" style="width:16px;height:16px;color:var(--saas-primary);"></i>
+        <span>Explore Interactive UI</span>
+      </a>
+    </div>
+
+    <!-- Trust Stats -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap;color:var(--lp-text-muted);font-size:0.85rem;font-weight:700;">
+      <span style="display:inline-flex;align-items:center;gap:6px;"><i data-lucide="shield-check" style="width:16px;height:16px;color:#10b981;"></i> 6-Digit Email OTP 2FA</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;"><i data-lucide="database" style="width:16px;height:16px;color:#06b6d4;"></i> Dual MongoDB Telemetry</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;"><i data-lucide="lock" style="width:16px;height:16px;color:#8b5cf6;"></i> AES-256-GCM Encrypted</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;"><i data-lucide="zap" style="width:16px;height:16px;color:#f59e0b;"></i> DDoS Sliding-Window WAF</span>
+    </div>
+  </section>
+
+  <!-- 3. Interactive Dummy Dashboard Showcase -->
+  <section id="preview" class="dashboard-preview-wrapper">
+    <div class="dummy-window-frame">
+      
+      <!-- Top Window Bar -->
+      <div class="dummy-window-topbar">
+        <div class="dummy-window-dots">
+          <span class="dummy-dot" style="background:#ef4444;"></span>
+          <span class="dummy-dot" style="background:#f59e0b;"></span>
+          <span class="dummy-dot" style="background:#10b981;"></span>
+        </div>
+
+        <!-- Interactive Tab Switcher -->
+        <div class="dummy-tabs-bar">
+          <button class="dummy-tab-btn active" onclick="switchDummyTab('kanban', this)">
+            <i data-lucide="trello" style="width:14px;height:14px;"></i>
+            <span>Kanban Board</span>
+          </button>
+          <button class="dummy-tab-btn" onclick="switchDummyTab('gantt', this)">
+            <i data-lucide="calendar" style="width:14px;height:14px;"></i>
+            <span>Gantt Roadmap</span>
+          </button>
+          <button class="dummy-tab-btn" onclick="switchDummyTab('ai-allocation', this)">
+            <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+            <span>AI Allocation</span>
+          </button>
+          <button class="dummy-tab-btn" onclick="switchDummyTab('chat', this)">
+            <i data-lucide="message-square" style="width:14px;height:14px;"></i>
+            <span>Team Chat</span>
+          </button>
+          <button class="dummy-tab-btn" onclick="switchDummyTab('metrics', this)">
+            <i data-lucide="activity" style="width:14px;height:14px;"></i>
+            <span>Velocity & Health</span>
+          </button>
+        </div>
+
+        <div style="display:inline-flex;align-items:center;gap:6px;font-size:0.75rem;font-weight:700;color:#10b981;background:rgba(16,185,129,0.12);padding:4px 10px;border-radius:100px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span>
+          Live Sync (120 FPS)
+        </div>
+      </div>
+
+      <!-- Main Interactive Viewport Container -->
+      <div class="dummy-preview-viewport">
+        
+        <!-- VIEW 1: KANBAN BOARD -->
+        <div id="dummy-kanban-view" style="display:block;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div>
+              <h3 style="font-size:1.1rem;font-weight:800;margin:0;">Sprint 1 — Core Platform Release</h3>
+              <p style="font-size:0.8rem;color:var(--lp-text-muted);margin:2px 0 0;">8 Issues • 34 Story Points • 10 Days Remaining</p>
+            </div>
+            <button class="btn-primary" style="font-size:0.8rem;padding:6px 14px;" onclick="addDummyKanbanTicket()">
+              <i data-lucide="plus" style="width:14px;height:14px;"></i>
+              <span>Quick Add Ticket</span>
+            </button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:16px;overflow-x:auto;">
+            
+            <!-- Column 1: TODO -->
+            <div style="background:var(--lp-section-bg);border-radius:12px;padding:14px;border:1px solid var(--lp-card-border);">
+              <div style="display:flex;justify-content:space-between;font-weight:800;font-size:0.82rem;margin-bottom:12px;color:var(--lp-text-muted);">
+                <span>TO DO</span>
+                <span class="badge-priority priority-LOW">2</span>
+              </div>
+              <div id="dummyColTodo" style="display:flex;flex-direction:column;gap:10px;">
+                <div class="dummy-card">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-STORY" style="font-size:0.65rem;">STORY</span>
+                    <span class="badge-points">5 pts</span>
+                  </div>
+                  <strong style="font-size:0.85rem;display:block;margin-bottom:8px;">SPR-12: Implement Redis Session Cache</strong>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span class="badge-priority priority-HIGH" style="font-size:0.65rem;">HIGH</span>
+                    <button class="btn-secondary" style="font-size:0.7rem;padding:2px 6px;" onclick="moveDummyCard(this, 'dummyColInProgress')">Start →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column 2: IN PROGRESS -->
+            <div style="background:var(--lp-section-bg);border-radius:12px;padding:14px;border:1px solid var(--lp-card-border);">
+              <div style="display:flex;justify-content:space-between;font-weight:800;font-size:0.82rem;margin-bottom:12px;color:var(--saas-primary);">
+                <span>IN PROGRESS</span>
+                <span class="badge-priority priority-MEDIUM">2</span>
+              </div>
+              <div id="dummyColInProgress" style="display:flex;flex-direction:column;gap:10px;">
+                <div class="dummy-card">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-FEATURE" style="font-size:0.65rem;">FEATURE</span>
+                    <span class="badge-points">8 pts</span>
+                  </div>
+                  <strong style="font-size:0.85rem;display:block;margin-bottom:8px;">SPR-14: Real-Time Gantt Chart Engine</strong>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span class="badge-priority priority-CRITICAL" style="font-size:0.65rem;">CRITICAL</span>
+                    <button class="btn-secondary" style="font-size:0.7rem;padding:2px 6px;" onclick="moveDummyCard(this, 'dummyColReview')">Review →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column 3: IN REVIEW -->
+            <div style="background:var(--lp-section-bg);border-radius:12px;padding:14px;border:1px solid var(--lp-card-border);">
+              <div style="display:flex;justify-content:space-between;font-weight:800;font-size:0.82rem;margin-bottom:12px;color:#f59e0b;">
+                <span>IN REVIEW</span>
+                <span class="badge-priority priority-MEDIUM">1</span>
+              </div>
+              <div id="dummyColReview" style="display:flex;flex-direction:column;gap:10px;">
+                <div class="dummy-card">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-TASK" style="font-size:0.65rem;">SECURITY</span>
+                    <span class="badge-points">5 pts</span>
+                  </div>
+                  <strong style="font-size:0.85rem;display:block;margin-bottom:8px;">SPR-18: Sliding-Window DDoS Middleware</strong>
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span class="badge-priority priority-HIGH" style="font-size:0.65rem;">HIGH</span>
+                    <button class="btn-primary" style="font-size:0.7rem;padding:2px 8px;background:#10b981;border-color:#10b981;" onclick="moveDummyCard(this, 'dummyColDone')">Approve ✓</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Column 4: DONE -->
+            <div style="background:var(--lp-section-bg);border-radius:12px;padding:14px;border:1px solid var(--lp-card-border);">
+              <div style="display:flex;justify-content:space-between;font-weight:800;font-size:0.82rem;margin-bottom:12px;color:#10b981;">
+                <span>DONE</span>
+                <span class="badge-priority priority-LOW" style="background:rgba(16,185,129,0.15);color:#10b981;">3</span>
+              </div>
+              <div id="dummyColDone" style="display:flex;flex-direction:column;gap:10px;">
+                <div class="dummy-card" style="opacity:0.85;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-BUG" style="font-size:0.65rem;">BUG</span>
+                    <span class="badge-points">3 pts</span>
+                  </div>
+                  <strong style="font-size:0.85rem;display:block;margin-bottom:8px;text-decoration:line-through;color:var(--lp-text-muted);">SPR-20: 6-Digit Email OTP Verification</strong>
+                  <span style="font-size:0.7rem;color:#10b981;font-weight:700;">Verified in Staging</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- VIEW 2: GANTT ROADMAP -->
+        <div id="dummy-gantt-view" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div>
+              <h3 style="font-size:1.1rem;font-weight:800;margin:0;">Interactive Gantt Roadmap</h3>
+              <p style="font-size:0.8rem;color:var(--lp-text-muted);margin:2px 0 0;">Q3 Enterprise Product Initiatives & Sprint Timelines</p>
+            </div>
+            <span class="badge-priority priority-LOW">Real-Time Auto Synced</span>
+          </div>
+
+          <div style="background:var(--lp-section-bg);border-radius:12px;padding:16px;border:1px solid var(--lp-card-border);">
+            <!-- Timeline Header -->
+            <div style="display:grid;grid-template-columns:220px repeat(4, 1fr);gap:8px;border-bottom:1px solid var(--lp-card-border);padding-bottom:10px;font-size:0.75rem;font-weight:800;color:var(--lp-text-muted);">
+              <div>INITIATIVE / EPIC</div>
+              <div style="text-align:center;">WEEK 1 (AUG 01)</div>
+              <div style="text-align:center;">WEEK 2 (AUG 08)</div>
+              <div style="text-align:center;">WEEK 3 (AUG 15)</div>
+              <div style="text-align:center;">WEEK 4 (AUG 22)</div>
+            </div>
+
+            <!-- Gantt Rows -->
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px;">
+              <div style="display:grid;grid-template-columns:220px 1fr;gap:8px;align-items:center;">
+                <div style="font-size:0.82rem;font-weight:700;color:var(--lp-text-title);">
+                  <span style="color:#8b5cf6;">●</span> Auth & 6-Digit OTP Engine
+                </div>
+                <div style="position:relative;height:28px;background:var(--lp-card-bg);border-radius:6px;border:1px solid var(--lp-card-border);">
+                  <div style="position:absolute;left:0;width:75%;height:100%;background:linear-gradient(90deg, #8b5cf6, #a855f7);border-radius:5px;display:flex;align-items:center;padding-left:10px;color:#fff;font-size:0.72rem;font-weight:800;">
+                    100% Completed
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:220px 1fr;gap:8px;align-items:center;">
+                <div style="font-size:0.82rem;font-weight:700;color:var(--lp-text-title);">
+                  <span style="color:#4f46e5;">●</span> AI Workload Balancer
+                </div>
+                <div style="position:relative;height:28px;background:var(--lp-card-bg);border-radius:6px;border:1px solid var(--lp-card-border);">
+                  <div style="position:absolute;left:25%;width:60%;height:100%;background:linear-gradient(90deg, #4f46e5, #6366f1);border-radius:5px;display:flex;align-items:center;padding-left:10px;color:#fff;font-size:0.72rem;font-weight:800;">
+                    85% Progress
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:220px 1fr;gap:8px;align-items:center;">
+                <div style="font-size:0.82rem;font-weight:700;color:var(--lp-text-title);">
+                  <span style="color:#06b6d4;">●</span> Real-Time Team Chat
+                </div>
+                <div style="position:relative;height:28px;background:var(--lp-card-bg);border-radius:6px;border:1px solid var(--lp-card-border);">
+                  <div style="position:absolute;left:40%;width:50%;height:100%;background:linear-gradient(90deg, #06b6d4, #0ea5e9);border-radius:5px;display:flex;align-items:center;padding-left:10px;color:#fff;font-size:0.72rem;font-weight:800;">
+                    60% In Progress
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:220px 1fr;gap:8px;align-items:center;">
+                <div style="font-size:0.82rem;font-weight:700;color:var(--lp-text-title);">
+                  <span style="color:#10b981;">●</span> DDoS WAF & Rate Limiter
+                </div>
+                <div style="position:relative;height:28px;background:var(--lp-card-bg);border-radius:6px;border:1px solid var(--lp-card-border);">
+                  <div style="position:absolute;left:10%;width:80%;height:100%;background:linear-gradient(90deg, #10b981, #059669);border-radius:5px;display:flex;align-items:center;padding-left:10px;color:#fff;font-size:0.72rem;font-weight:800;">
+                    95% Tested
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 3: AI WORK ALLOCATION -->
+        <div id="dummy-ai-allocation-view" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div>
+              <h3 style="font-size:1.1rem;font-weight:800;margin:0;">AI Workload Balancing Matrix</h3>
+              <p style="font-size:0.8rem;color:var(--lp-text-muted);margin:2px 0 0;">Intelligent role matching, capacity optimization, and delivery risk mitigation.</p>
+            </div>
+            <button class="btn-primary" style="font-size:0.8rem;padding:6px 14px;" onclick="simulateAiAllocation()">
+              <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+              <span>Re-Balance Team</span>
+            </button>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="task-row-item" style="padding:12px 16px;background:var(--lp-section-bg);border-radius:10px;border:1px solid var(--lp-card-border);">
+              <div style="min-width:0;flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="type-badge-pill type-BUG">BUG</span>
+                  <strong style="font-size:0.88rem;color:var(--lp-text-title);">SPR-41: MongoDB Dual-Write Connection Retry</strong>
+                  <span class="badge-points">3 pts</span>
+                </div>
+                <div style="font-size:0.75rem;color:var(--lp-text-muted);margin-top:4px;">
+                  Assigned to Sarah Connor (QA Engineer) — optimal workload balance (0/35 hrs committed).
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:28px;height:28px;border-radius:50%;background:#10b981;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">SC</div>
+                <div>
+                  <strong style="font-size:0.8rem;color:var(--lp-text-title);">Sarah Connor</strong>
+                  <div style="font-size:0.68rem;color:var(--lp-text-muted);">QA Lead</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="task-row-item" style="padding:12px 16px;background:var(--lp-section-bg);border-radius:10px;border:1px solid var(--lp-card-border);">
+              <div style="min-width:0;flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="type-badge-pill type-STORY">STORY</span>
+                  <strong style="font-size:0.88rem;color:var(--lp-text-title);">SPR-42: Sliding-Window Rate Limiter Engine</strong>
+                  <span class="badge-points">8 pts</span>
+                </div>
+                <div style="font-size:0.75rem;color:var(--lp-text-muted);margin-top:4px;">
+                  Assigned to Alex Rivers (Software Developer) — specialized in backend security algorithms.
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:28px;height:28px;border-radius:50%;background:#4f46e5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;">AR</div>
+                <div>
+                  <strong style="font-size:0.8rem;color:var(--lp-text-title);">Alex Rivers</strong>
+                  <div style="font-size:0.68rem;color:var(--lp-text-muted);">Software Developer</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 4: TEAM CHAT APP -->
+        <div id="dummy-chat-view" style="display:none;">
+          <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;height:340px;">
+            <!-- Channels list -->
+            <div style="background:var(--lp-section-bg);border-radius:10px;padding:12px;border:1px solid var(--lp-card-border);">
+              <div style="font-size:0.72rem;font-weight:800;color:var(--lp-text-muted);margin-bottom:8px;">CHANNELS</div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="padding:6px 10px;background:rgba(79,70,229,0.15);color:var(--saas-primary);border-radius:6px;font-size:0.82rem;font-weight:700;"># dev-team</div>
+                <div style="padding:6px 10px;color:var(--lp-text-muted);border-radius:6px;font-size:0.82rem;"># general</div>
+                <div style="padding:6px 10px;color:var(--lp-text-muted);border-radius:6px;font-size:0.82rem;"># sprint-planning</div>
+              </div>
+            </div>
+
+            <!-- Chat Stream -->
+            <div style="display:flex;flex-direction:column;background:var(--lp-card-bg);border:1px solid var(--lp-card-border);border-radius:10px;overflow:hidden;">
+              <div id="dummyChatStream" style="flex:1;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                  <div style="width:28px;height:28px;border-radius:50%;background:#4f46e5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;">AS</div>
+                  <div>
+                    <div style="font-size:0.8rem;font-weight:700;color:var(--lp-text-title);">Aayush Shah <span style="font-size:0.68rem;color:var(--lp-text-muted);">10:14 AM</span></div>
+                    <div style="font-size:0.82rem;color:var(--lp-text-body);background:var(--lp-section-bg);padding:6px 10px;border-radius:6px;margin-top:2px;border:1px solid var(--lp-card-border);">
+                      Team, the Gantt roadmap and AI Workload Balancer are fully deployed to staging!
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                  <div style="width:28px;height:28px;border-radius:50%;background:#10b981;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;">SC</div>
+                  <div>
+                    <div style="font-size:0.8rem;font-weight:700;color:var(--lp-text-title);">Sarah Connor <span style="font-size:0.68rem;color:var(--lp-text-muted);">10:15 AM</span></div>
+                    <div style="font-size:0.82rem;color:var(--lp-text-body);background:var(--lp-section-bg);padding:6px 10px;border-radius:6px;margin-top:2px;border:1px solid var(--lp-card-border);">
+                      Verified! OTP email dispatch and rate limit firewall tests passed 100% OK.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Chat Input -->
+              <div style="padding:10px;border-top:1px solid var(--lp-card-border);display:flex;gap:8px;">
+                <input id="dummyChatInput" type="text" class="form-control" placeholder="Type a demo message and press Enter..." style="height:36px;font-size:0.82rem;" onkeydown="if(event.key==='Enter') sendDummyMessage()">
+                <button class="btn-primary" style="height:36px;padding:0 14px;" onclick="sendDummyMessage()">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 5: VELOCITY & HEALTH -->
+        <div id="dummy-metrics-view" style="display:none;">
+          <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;">
+            <div style="background:var(--lp-section-bg);padding:20px;border-radius:12px;border:1px solid var(--lp-card-border);text-align:center;">
+              <div style="font-size:0.8rem;font-weight:700;color:var(--lp-text-muted);margin-bottom:8px;">SPRINT HEALTH SCORE</div>
+              <div style="font-size:2.4rem;font-weight:900;color:#10b981;">94%</div>
+              <div style="font-size:0.75rem;color:#10b981;font-weight:700;margin-top:4px;">● Optimal Velocity Track</div>
+            </div>
+            <div style="background:var(--lp-section-bg);padding:20px;border-radius:12px;border:1px solid var(--lp-card-border);text-align:center;">
+              <div style="font-size:0.8rem;font-weight:700;color:var(--lp-text-muted);margin-bottom:8px;">STORY POINTS COMMITTED</div>
+              <div style="font-size:2.4rem;font-weight:900;color:var(--saas-primary);">42 / 45</div>
+              <div style="font-size:0.75rem;color:var(--lp-text-body);margin-top:4px;">93% Completion Rate</div>
+            </div>
+            <div style="background:var(--lp-section-bg);padding:20px;border-radius:12px;border:1px solid var(--lp-card-border);text-align:center;">
+              <div style="font-size:0.8rem;font-weight:700;color:var(--lp-text-muted);margin-bottom:8px;">CRITICAL BLOCKERS</div>
+              <div style="font-size:2.4rem;font-weight:900;color:#06b6d4;">0</div>
+              <div style="font-size:0.75rem;color:#06b6d4;font-weight:700;margin-top:4px;">✓ Zero Delivery Impediments</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Features Deep Dive -->
+  <section id="features" class="features-section">
+    <div class="section-header">
+      <div class="hero-badge">ENGINEERED FOR VELOCITY</div>
+      <h2 class="section-title">Everything modern software teams need to ship on time.</h2>
+      <p style="color:var(--lp-text-body);font-size:1.05rem;">
+        From interactive roadmaps to live AI task balancing, Sprintly unites your entire engineering lifecycle into one unified system.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <!-- 1. Dual Task Allocation -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">
+          <i data-lucide="users" style="width:24px;height:24px;"></i>
+        </div>
+        <h3 style="font-size:1.25rem;font-weight:800;margin-bottom:10px;">Dual Task Allocation Engine</h3>
+        <p style="color:var(--lp-text-body);font-size:0.9rem;line-height:1.6;">
+          Choose between manual drag-and-drop assignment or AI Smart Work Allocation that balances team capacity and role specialties in 1 click.
+        </p>
+      </div>
+
+      <!-- 2. Real-Time Gantt Chart -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper" style="background:rgba(6,182,212,0.12);color:#06b6d4;">
+          <i data-lucide="calendar" style="width:24px;height:24px;"></i>
+        </div>
+        <h3 style="font-size:1.25rem;font-weight:800;margin-bottom:10px;">Real-Time Gantt Roadmap</h3>
+        <p style="color:var(--lp-text-body);font-size:0.9rem;line-height:1.6;">
+          Dynamic Gantt charts that auto-sync across projects, epics, and sprints. Real progress bars update in real time as tickets are closed.
+        </p>
+      </div>
+
+      <!-- 3. Team Chat App -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper" style="background:rgba(16,185,129,0.12);color:#10b981;">
+          <i data-lucide="message-square" style="width:24px;height:24px;"></i>
+        </div>
+        <h3 style="font-size:1.25rem;font-weight:800;margin-bottom:10px;">Team Communication Chat</h3>
+        <p style="color:var(--lp-text-body);font-size:0.9rem;line-height:1.6;">
+          Dedicated project channels (#general, #dev-team, #sprint-planning) and private direct messages with live sync and typing indicators.
+        </p>
+      </div>
+
+      <!-- 4. Sprintly AI Copilot -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper" style="background:rgba(139,92,246,0.12);color:#8b5cf6;">
+          <i data-lucide="sparkles" style="width:24px;height:24px;"></i>
+        </div>
+        <h3 style="font-size:1.25rem;font-weight:800;margin-bottom:10px;">Live Telemetry AI Copilot</h3>
+        <p style="color:var(--lp-text-body);font-size:0.9rem;line-height:1.6;">
+          AI that has direct live read access to workspace metrics, answers natural language queries, detects risks, and generates acceptance criteria.
+        </p>
+      </div>
+
+      <!-- 5. DDoS & Anti-Injection Firewall -->
+      <div class="feature-card" id="security">
+        <div class="feature-icon-wrapper" style="background:rgba(239,68,68,0.12);color:#ef4444;">
+          <i data-lucide="shield-alert" style="width:24px;height:24px;"></i>
+        </div>
+        <h3 style="font-size:1.25rem;font-weight:800;margin-bottom:10px;">Cyber Threat Immunity</h3>
+        <p style="color:var(--lp-text-body);font-size:0.9rem;line-height:1.6;">
+          Sliding-window DDoS rate limiting, SQLi / NoSQLi / XSS proactive firewall, 6-digit email OTP 2FA, and AES-256-GCM authenticated encryption.
+        </p>
+      </div>
+
+      <!-- 6. MongoDB Dual-Sync Engine -->
+      <div class="feature-card">
+        <div class="feature-icon-wrapper" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+          <i data-lucide="database" style="width:24px;height:24px;"></i>
+        </div>
+        <h3 style="font-size:1.25rem;font-weight:800;margin-bottom:10px;">MongoDB Dual-Sync Engine</h3>
+        <p style="color:var(--lp-text-body);font-size:0.9rem;line-height:1.6;">
+          High-velocity audit logs, event telemetry, and activity streams synchronized seamlessly with MongoDB for sub-millisecond querying.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. FAQ Section -->
+  <section id="faq" class="faq-section">
+    <div class="section-header">
+      <h2 class="section-title">Frequently Asked Questions</h2>
+    </div>
+
+    <div class="faq-item open">
+      <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+        <span>How does the AI Workload Allocation feature work?</span>
+        <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+      </div>
+      <div class="faq-answer">
+        Sprintly AI analyzes each team member's role (Developer, QA Engineer, Designer, Architect), weekly capacity, and current active tickets. It matches ticket story points and type to balance the load evenly across all engineers with 1-click commitment.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+        <span>Does the Gantt Chart update in real-time?</span>
+        <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+      </div>
+      <div class="faq-answer">
+        Yes! The Gantt Chart connects to our high-velocity REST API stream and auto-syncs every few seconds. Any status transition on your Kanban board immediately reflects on your roadmap timeline.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+        <span>How is user authentication secured?</span>
+        <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+      </div>
+      <div class="faq-answer">
+        Sprintly uses 6-digit email OTP (One-Time Password) verification for both signups and logins. Passwords are hash-protected with PBKDF2, sessions are encrypted, and API routes are guarded with sliding-window rate limiters.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
+        <span>Can I switch between Light and Dark mode?</span>
+        <i data-lucide="chevron-down" style="width:16px;height:16px;"></i>
+      </div>
+      <div class="faq-answer">
+        Yes, you can toggle between Light and Dark mode using the sun/moon button in the top navigation bar at any time. Your preference is persisted across all pages.
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. SaaS Footer -->
+  <footer class="landing-footer">
+    <div style="max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:24px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:var(--saas-gradient-light);display:flex;align-items:center;justify-content:center;color:#fff;">
+            <i data-lucide="zap" style="width:16px;height:16px;"></i>
+          </div>
+          <strong style="font-size:1.15rem;color:var(--lp-text-title);">Sprintly</strong>
+        </div>
+        <p style="font-size:0.85rem;max-width:320px;line-height:1.5;">
+          The next-generation agile intelligence and project management platform.
+        </p>
+      </div>
+
+      <div style="display:flex;gap:40px;font-size:0.85rem;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <strong style="color:var(--lp-text-title);">Platform</strong>
+          <a href="{% url 'accounts:signup' %}" style="color:var(--lp-text-muted);text-decoration:none;">Workspace</a>
+          <a href="{% url 'notifications:team_chat' %}" style="color:var(--lp-text-muted);text-decoration:none;">Team Chat</a>
+          <a href="/#preview" style="color:var(--lp-text-muted);text-decoration:none;">Gantt Roadmap</a>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <strong style="color:var(--lp-text-title);">Security</strong>
+          <a href="/#security" style="color:var(--lp-text-muted);text-decoration:none;">DDoS Protection</a>
+          <a href="/#security" style="color:var(--lp-text-muted);text-decoration:none;">AES-256 Encryption</a>
+          <a href="/#security" style="color:var(--lp-text-muted);text-decoration:none;">6-Digit OTP 2FA</a>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:1180px;margin:40px auto 0;padding-top:20px;border-top:1px solid var(--lp-card-border);display:flex;justify-content:space-between;font-size:0.8rem;align-items:center;">
+      <span>© 2026 Sprintly Enterprise. All rights reserved.</span>
+      <span style="color:#10b981;font-weight:700;">● System Operational (99.99% SLA)</span>
+    </div>
+  </footer>
+
+  <!-- Scripts for Theme and Interactive Dummy Dashboard -->
+  <script>
+    // Universal Theme Toggle Controller (Light / Dark)
+    function applyCurrentTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("sprintly_theme", theme);
+      
+      const icon = document.getElementById("landingThemeIcon");
+      if (icon) {
+        icon.setAttribute("data-lucide", theme === "dark" ? "sun" : "moon");
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function toggleLandingTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = current === "dark" ? "light" : "dark";
+      applyCurrentTheme(next);
+    }
+
+    // Initialize Theme on Load
+    document.addEventListener("DOMContentLoaded", () => {
+      const saved = localStorage.getItem("sprintly_theme") || "dark";
+      applyCurrentTheme(saved);
+      if (window.lucide) lucide.createIcons();
+    });
+
+    // Dummy Showcase Tab Switcher
+    function switchDummyTab(tabName, btn) {
+      document.querySelectorAll(".dummy-tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      document.getElementById("dummy-kanban-view").style.display = "none";
+      document.getElementById("dummy-gantt-view").style.display = "none";
+      document.getElementById("dummy-ai-allocation-view").style.display = "none";
+      document.getElementById("dummy-chat-view").style.display = "none";
+      document.getElementById("dummy-metrics-view").style.display = "none";
+
+      const target = document.getElementById(`dummy-${tabName}-view`);
+      if (target) target.style.display = "block";
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // Kanban Dummy Card Mover
+    function moveDummyCard(btn, targetColId) {
+      const card = btn.closest(".dummy-card");
+      const targetCol = document.getElementById(targetColId);
+      if (card && targetCol) {
+        card.style.opacity = "0.4";
+        card.style.transform = "scale(0.95)";
+        setTimeout(() => {
+          targetCol.appendChild(card);
+          card.style.opacity = "1";
+          card.style.transform = "scale(1)";
+          if (targetColId === 'dummyColDone') {
+            btn.remove();
+          }
+        }, 150);
+      }
+    }
+
+    function addDummyKanbanTicket() {
+      const title = prompt("Enter ticket title:", "SPR-99: Kafka Event Stream Integration");
+      if (!title) return;
+      const col = document.getElementById("dummyColTodo");
+      const card = document.createElement("div");
+      card.className = "dummy-card";
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span class="type-badge-pill type-FEATURE" style="font-size:0.65rem;">FEATURE</span>
+          <span class="badge-points">5 pts</span>
+        </div>
+        <strong style="font-size:0.85rem;display:block;margin-bottom:8px;">${title}</strong>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="badge-priority priority-HIGH" style="font-size:0.65rem;">HIGH</span>
+          <button class="btn-secondary" style="font-size:0.7rem;padding:2px 6px;" onclick="moveDummyCard(this, 'dummyColInProgress')">Start →</button>
+        </div>
+      `;
+      col.prepend(card);
+    }
+
+    function sendDummyMessage() {
+      const input = document.getElementById("dummyChatInput");
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+
+      const stream = document.getElementById("dummyChatStream");
+      const msgDiv = document.createElement("div");
+      msgDiv.style.cssText = "display:flex;gap:10px;align-items:flex-start;";
+      msgDiv.innerHTML = `
+        <div style="width:28px;height:28px;border-radius:50%;background:#8b5cf6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:800;">YOU</div>
+        <div>
+          <div style="font-size:0.8rem;font-weight:700;color:var(--lp-text-title);">You <span style="font-size:0.68rem;color:var(--lp-text-muted);">Just now</span></div>
+          <div style="font-size:0.82rem;color:var(--lp-text-body);background:var(--lp-section-bg);padding:6px 10px;border-radius:6px;margin-top:2px;border:1px solid var(--lp-card-border);">
+            ${text}
+          </div>
+        </div>
+      `;
+      stream.appendChild(msgDiv);
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    function simulateAiAllocation() {
+      alert("Sprintly AI analyzed 42 story points across 6 team members. Optimal load distribution achieved with 0 bottlenecks!");
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,415 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ purpose_label }} | Sprintly — Enterprise Agile Platform</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Global Design System -->
+  <link rel="stylesheet" href="{% static 'css/sprintly.css' %}">
+
+  <style>
+    :root {
+      --auth-gradient-primary: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%);
+    }
+
+    [data-theme="light"] {
+      --auth-bg: #f8fafc;
+      --auth-mesh: radial-gradient(circle at 50% 0%, rgba(79, 70, 229, 0.12) 0%, rgba(248, 250, 252, 0.95) 75%);
+      --auth-card-bg: rgba(255, 255, 255, 0.92);
+      --auth-card-border: #e2e8f0;
+      --auth-card-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.08), 0 0 20px rgba(79, 70, 229, 0.06);
+      --auth-text-title: #0f172a;
+      --auth-text-body: #334155;
+      --auth-text-muted: #64748b;
+      --otp-box-bg: #ffffff;
+      --otp-box-border: #cbd5e1;
+    }
+
+    [data-theme="dark"] {
+      --auth-bg: #090d16;
+      --auth-mesh: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.22) 0%, rgba(9, 13, 22, 0.98) 75%);
+      --auth-card-bg: rgba(20, 29, 46, 0.85);
+      --auth-card-border: rgba(255, 255, 255, 0.1);
+      --auth-card-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 35px rgba(99, 102, 241, 0.18);
+      --auth-text-title: #f8fafc;
+      --auth-text-body: #94a3b8;
+      --auth-text-muted: #64748b;
+      --otp-box-bg: #0f172a;
+      --otp-box-border: rgba(255, 255, 255, 0.14);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--auth-bg);
+      background-image: var(--auth-mesh);
+      color: var(--auth-text-body);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background-color 0.25s ease, color 0.25s ease;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .auth-nav {
+      width: 100%;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-sizing: border-box;
+    }
+
+    .auth-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--auth-text-title);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 1.35rem;
+      letter-spacing: -0.5px;
+      transition: transform 0.2s ease;
+    }
+
+    .auth-logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--auth-gradient-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+    }
+
+    .theme-toggle-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--auth-card-border);
+      background: var(--auth-card-bg);
+      color: var(--auth-text-title);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle-btn:hover {
+      transform: translateY(-2px);
+      border-color: #4f46e5;
+    }
+
+    .auth-main-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 460px;
+      background: var(--auth-card-bg);
+      border: 1px solid var(--auth-card-border);
+      border-radius: 20px;
+      padding: 40px 36px;
+      box-shadow: var(--auth-card-shadow);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      animation: authFadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-sizing: border-box;
+      text-align: center;
+      position: relative;
+    }
+
+    @keyframes authFadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .brand-icon-wrapper {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--auth-gradient-primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
+      animation: pulseGlow 3s infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .auth-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--auth-text-title);
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .auth-subtitle {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--auth-text-muted);
+      margin: 0 0 24px;
+    }
+
+    .otp-digits-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 24px 0 24px;
+    }
+
+    .otp-box {
+      width: 48px;
+      height: 56px;
+      border: 1.5px solid var(--otp-box-border);
+      border-radius: 12px;
+      background: var(--otp-box-bg);
+      color: var(--auth-text-title);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 800;
+      text-align: center;
+      outline: none;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .otp-box:focus {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
+      transform: translateY(-2px);
+    }
+
+    .btn-auth-submit {
+      width: 100%;
+      height: 46px;
+      border-radius: 12px;
+      background: var(--auth-gradient-primary);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+      transition: all 0.25s ease;
+      margin-top: 8px;
+    }
+
+    .btn-auth-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(79, 70, 229, 0.5);
+    }
+
+    .auth-security-bar {
+      padding: 20px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--auth-text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .security-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <nav class="auth-nav">
+    <a href="/" class="auth-logo" title="Sprintly Home">
+      <div class="auth-logo-icon">
+        <i data-lucide="zap" style="width:20px;height:20px;"></i>
+      </div>
+      <span>Sprintly</span>
+    </a>
+
+    <button id="authThemeToggle" class="theme-toggle-btn" onclick="toggleAuthTheme()" title="Toggle Theme">
+      <i id="authThemeIcon" data-lucide="sun" style="width:18px;height:18px;"></i>
+    </button>
+  </nav>
+
+  <!-- Main Auth Card -->
+  <main class="auth-main-wrapper">
+    <div class="auth-card">
+      <div class="brand-icon-wrapper">
+        <i data-lucide="shield-check" style="width:28px;height:28px;"></i>
+      </div>
+
+      <h1 class="auth-title">{{ purpose_label }}</h1>
+      <p class="auth-subtitle">
+        Enter the 6-digit verification code sent to<br>
+        <strong style="color:var(--auth-text-title);">{{ user_email }}</strong>
+      </p>
+
+      <!-- Django Messages -->
+      {% if messages %}
+        <div style="margin-bottom:18px;">
+          {% for message in messages %}
+            <div style="padding:10px 14px;border-radius:10px;font-size:0.85rem;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px;
+              {% if message.tags == 'error' %}background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);
+              {% elif message.tags == 'success' %}background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);
+              {% else %}background:rgba(79,70,229,0.15);color:#6366f1;border:1px solid rgba(79,70,229,0.3);{% endif %}">
+              <i data-lucide="alert-circle" style="width:16px;height:16px;"></i>
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="POST" id="otpForm" onsubmit="return syncOtpValue()">
+        {% csrf_token %}
+        <input type="hidden" name="otp_code" id="otp_code">
+
+        <div class="otp-digits-container">
+          <input type="text" maxlength="1" class="otp-box" id="digit_1" name="digit_1" inputmode="numeric" autocomplete="one-time-code" autofocus>
+          <input type="text" maxlength="1" class="otp-box" id="digit_2" name="digit_2" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="digit_3" name="digit_3" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="digit_4" name="digit_4" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="digit_5" name="digit_5" inputmode="numeric">
+          <input type="text" maxlength="1" class="otp-box" id="digit_6" name="digit_6" inputmode="numeric">
+        </div>
+
+        <button type="submit" class="btn-auth-submit">
+          <span>Verify & Continue</span>
+          <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+        </button>
+      </form>
+
+      <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--auth-card-border);display:flex;align-items:center;justify-content:space-between;font-size:0.85rem;">
+        <a href="{% url 'accounts:resend_otp' %}" style="color:#6366f1;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
+          <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>
+          <span>Resend Code</span>
+        </a>
+        <a href="{% url 'accounts:login' %}" style="color:var(--auth-text-muted);text-decoration:none;font-weight:600;">
+          ← Back to Login
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Security Footer -->
+  <footer class="auth-security-bar">
+    <span class="security-pill"><i data-lucide="shield-check" style="width:15px;height:15px;color:#10b981;"></i> 6-Digit Email OTP 2FA</span>
+    <span class="security-pill"><i data-lucide="lock" style="width:15px;height:15px;color:#8b5cf6;"></i> AES-256-GCM Encryption</span>
+    <span class="security-pill"><i data-lucide="zap" style="width:15px;height:15px;color:#f59e0b;"></i> Sliding-Window DDoS Shield</span>
+  </footer>
+
+  <!-- Universal Theme Controller & OTP Input Script -->
+  <script>
+    function applyAuthTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      localStorage.setItem("sprintly_theme", theme);
+      const icon = document.getElementById("authThemeIcon");
+      if (icon) {
+        icon.setAttribute("data-lucide", theme === "dark" ? "sun" : "moon");
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function toggleAuthTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "dark";
+      const next = current === "dark" ? "light" : "dark";
+      applyAuthTheme(next);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const saved = localStorage.getItem("sprintly_theme") || "dark";
+      applyAuthTheme(saved);
+      if (window.lucide) lucide.createIcons();
+    });
+
+    const boxes = [
+      document.getElementById('digit_1'),
+      document.getElementById('digit_2'),
+      document.getElementById('digit_3'),
+      document.getElementById('digit_4'),
+      document.getElementById('digit_5'),
+      document.getElementById('digit_6')
+    ];
+
+    boxes.forEach((box, index) => {
+      box.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (val.length === 1 && index < 5) {
+          boxes[index + 1].focus();
+        }
+        syncOtpValue();
+      });
+
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !box.value && index > 0) {
+          boxes[index - 1].focus();
+        }
+      });
+
+      box.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text').trim();
+        if (/^\d{6}$/.test(pasted)) {
+          for (let i = 0; i < 6; i++) {
+            boxes[i].value = pasted[i];
+          }
+          boxes[5].focus();
+          syncOtpValue();
+          document.getElementById('otpForm').submit();
+        }
+      });
+    });
+
+    function syncOtpValue() {
+      const code = boxes.map(b => b.value).join('');
+      document.getElementById('otp_code').value = code;
+      return code.length === 6;
+    }
+  </script>
+</body>
+</html>

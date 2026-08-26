@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}My Work | Sprintly{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-container">
+  
+  <div class="view-header">
+    <div class="view-title-group">
+      <h1>
+        <i data-lucide="check-square" style="width:26px;height:26px;color:#4f46e5;"></i>
+        <span>My Work</span>
+      </h1>
+      <div class="view-subtitle">Consolidated view of all issues, bugs, and tasks assigned to you across projects.</div>
+    </div>
+
+    <div class="filter-toolbar">
+      <form method="GET" style="display:flex;align-items:center;gap:8px;">
+        <i data-lucide="filter" style="width:14px;height:14px;color:var(--text-muted);"></i>
+        <select name="project" class="filter-select" onchange="this.form.submit()">
+          <option value="">All Projects</option>
+          {% for p in projects %}
+            <option value="{{ p.id }}" {% if selected_project_id == p.id %}selected{% endif %}>{{ p.key }} - {{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+  </div>
+
+  <!-- AI Daily Work & Standup Assistant Bar -->
+  <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;">
+    <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:6px 14px;border-color:rgba(79,70,229,0.35);color:var(--accent-primary);" onclick="SprintlyAI.triggerAction('daily_work')">
+      <i data-lucide="sparkles" style="width:14px;height:14px;"></i> What Should I Work On?
+    </button>
+    <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:6px 14px;" onclick="SprintlyAI.triggerAction('generate_standup')">
+      <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Generate My Standup
+    </button>
+  </div>
+
+  <!-- 4 Work Columns / Sections Grid -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));gap:20px;margin-top:20px;">
+    
+    <!-- Section 1: Due Today & Overdue -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <h3 style="font-size:1rem;font-weight:700;color:#dc2626;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+          <span>Overdue & Due Today</span>
+        </h3>
+        <span class="badge-priority priority-CRITICAL">{{ overdue.count|add:due_today.count }}</span>
+      </div>
+
+      <div class="task-list-container">
+        {% for issue in overdue %}
+          <div class="task-row-item" style="border-left:3px solid #dc2626;">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;">{{ issue.key }}</a>
+                <span style="font-size:0.75rem;color:#dc2626;font-weight:700;">Overdue ({{ issue.due_date|date:"M d" }})</span>
+              </div>
+              <div style="font-size:0.85rem;color:var(--text-secondary);">{{ issue.title }}</div>
+            </div>
+            <span class="status-pill status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+          </div>
+        {% empty %}
+          {% for issue in due_today %}
+            <div class="task-row-item" style="border-left:3px solid #f59e0b;">
+              <div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                  <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;">{{ issue.key }}</a>
+                  <span style="font-size:0.75rem;color:#f59e0b;font-weight:700;">Due Today</span>
+                </div>
+                <div style="font-size:0.85rem;color:var(--text-secondary);">{{ issue.title }}</div>
+              </div>
+              <span class="status-pill status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+            </div>
+          {% empty %}
+            <div style="font-size:0.85rem;color:var(--text-muted);padding:14px;text-align:center;">No overdue tasks. Great work!</div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Section 2: In Progress -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <h3 style="font-size:1rem;font-weight:700;color:#0284c7;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="play-circle" style="width:16px;height:16px;"></i>
+          <span>Currently In Progress</span>
+        </h3>
+        <span class="badge-priority priority-HIGH">{{ in_progress.count }}</span>
+      </div>
+
+      <div class="task-list-container">
+        {% for issue in in_progress %}
+          <div class="task-row-item" style="border-left:3px solid #0284c7;">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;">{{ issue.key }}</a>
+                <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+              </div>
+              <div style="font-size:0.85rem;color:var(--text-secondary);">{{ issue.title }}</div>
+            </div>
+            <span class="status-pill status-IN_PROGRESS">In Progress</span>
+          </div>
+        {% empty %}
+          <div style="font-size:0.85rem;color:var(--text-muted);padding:14px;text-align:center;">No tasks actively in progress.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Section 3: Due This Week -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <h3 style="font-size:1rem;font-weight:700;color:#7c3aed;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="calendar" style="width:16px;height:16px;"></i>
+          <span>Due This Week</span>
+        </h3>
+        <span class="badge-priority priority-MEDIUM">{{ due_this_week.count }}</span>
+      </div>
+
+      <div class="task-list-container">
+        {% for issue in due_this_week %}
+          <div class="task-row-item">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;">{{ issue.key }}</a>
+                <span style="font-size:0.75rem;color:var(--text-muted);">{{ issue.due_date|date:"l, M d" }}</span>
+              </div>
+              <div style="font-size:0.85rem;color:var(--text-secondary);">{{ issue.title }}</div>
+            </div>
+            <span class="status-pill status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+          </div>
+        {% empty %}
+          <div style="font-size:0.85rem;color:var(--text-muted);padding:14px;text-align:center;">No upcoming deadlines this week.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Section 4: Recently Completed -->
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <h3 style="font-size:1rem;font-weight:700;color:#10b981;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+          <span>Recently Completed</span>
+        </h3>
+        <span class="badge-priority priority-LOW">{{ completed.count }}</span>
+      </div>
+
+      <div class="task-list-container">
+        {% for issue in completed %}
+          <div class="task-row-item" style="opacity:0.85;">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;text-decoration:line-through;">{{ issue.key }}</a>
+              </div>
+              <div style="font-size:0.85rem;color:var(--text-secondary);">{{ issue.title }}</div>
+            </div>
+            <span class="status-pill status-DONE">Done</span>
+          </div>
+        {% empty %}
+          <div style="font-size:0.85rem;color:var(--text-muted);padding:14px;text-align:center;">No completed tasks yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

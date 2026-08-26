@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results | Sprintly{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-container">
+  
+  <div class="view-header">
+    <div class="view-title-group">
+      <h1>
+        <i data-lucide="search" style="width:26px;height:26px;color:#4f46e5;"></i>
+        <span>Search Results for "{{ query }}"</span>
+      </h1>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-top:20px;">
+    <!-- Issues Results -->
+    <div>
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);">Matching Issues</h3>
+        </div>
+
+        <div class="task-list-container">
+          {% for issue in results.issues %}
+            <div class="task-row-item">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;">
+                  <span style="color:var(--text-muted);font-size:0.85rem;margin-right:4px;">{{ issue.key }}</span>
+                  {{ issue.title }}
+                </a>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                <span class="status-pill status-{{ issue.status }}">{{ issue.status }}</span>
+              </div>
+            </div>
+          {% empty %}
+            <div style="padding:16px;color:var(--text-muted);font-size:0.85rem;">No matching tickets found.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Projects, Epics & Sprints Results -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <!-- Projects -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-primary);">Projects</h3>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for p in results.projects %}
+            <a href="{% url 'projects:detail' p.id %}" class="task-row-item" style="text-decoration:none;">
+              <span style="font-weight:700;color:var(--text-primary);">{{ p.name }} ({{ p.key }})</span>
+            </a>
+          {% empty %}
+            <div style="font-size:0.8rem;color:var(--text-muted);">No matching projects.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Epics -->
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-primary);">Epics & Milestones</h3>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for e in results.epics %}
+            <a href="{% url 'issues:detail' e.id %}" class="task-row-item" style="text-decoration:none;">
+              <span class="type-badge-pill type-EPIC">EPIC</span>
+              <span style="font-weight:700;color:var(--text-primary);">{{ e.key }} - {{ e.title }}</span>
+            </a>
+          {% empty %}
+            <div style="font-size:0.8rem;color:var(--text-muted);">No matching epics.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

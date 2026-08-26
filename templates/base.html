@@ -1,0 +1,384 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Sprintly - Enterprise Agile Platform{% endblock %}</title>
+  
+  <!-- Distinctive SaaS Typography: Outfit (Display/Headings), Plus Jakarta Sans (UI Body), JetBrains Mono (Technical/Keys) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{% static 'css/sprintly.css' %}">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for Burndown, Velocity & Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="sprintly-navbar">
+    <div class="brand-section">
+      <a href="{% url 'dashboard:home' %}" class="brand-logo">
+        <div class="brand-icon">
+          <i data-lucide="zap" style="width:20px;height:20px;"></i>
+        </div>
+        <span>Sprintly</span>
+      </a>
+      <div class="brand-badge">
+        <span class="pulse-dot"></span> Live Sync
+      </div>
+    </div>
+
+    <!-- Center Navigation Search & Selectors -->
+    <div class="nav-center">
+      <div class="nav-select-wrapper">
+        <select id="projectSelector" class="nav-select" onchange="if(this.value) window.location.href='/projects/' + this.value + '/';">
+          {% for p in all_projects %}
+            <option value="{{ p.id }}" {% if p.id == project.id %}selected{% endif %}>
+              {{ p.key }} - {{ p.name }}
+            </option>
+          {% empty %}
+            <option value="" disabled selected>No Projects</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button class="search-command-btn" onclick="SprintlyApp.openCommandPalette()">
+        <i data-lucide="search" style="width:14px;height:14px;"></i>
+        <span>Search tickets, projects, sprints...</span>
+        <kbd class="kbd-shortcut">Ctrl+K</kbd>
+      </button>
+    </div>
+
+    <!-- Right Actions: Theme Toggle, Create Issue, Notifications, User Profile -->
+    <div class="nav-actions">
+      <!-- Theme Switcher (Light / Dark) -->
+      <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Light / Dark Theme" onclick="SprintlyApp.toggleTheme()">
+        <i id="themeToggleIcon" data-lucide="moon" style="width:18px;height:18px;"></i>
+      </button>
+
+      <!-- Quick Create Issue Button -->
+      <button class="btn-primary" onclick="SprintlyApp.openCreateIssueModal()">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i>
+        <span>Create Issue</span>
+      </button>
+
+      <!-- Notifications Inbox Link -->
+      <a href="{% url 'notifications:inbox' %}" class="btn-icon" title="Notifications">
+        <i data-lucide="bell" style="width:18px;height:18px;"></i>
+        {% if unread_notifications %}
+          <span id="notificationCount" class="badge-count">{{ unread_notifications }}</span>
+        {% endif %}
+      </a>
+
+      <!-- User Profile Dropdown Button -->
+      <a href="{% url 'accounts:profile' %}" class="user-avatar-btn" title="My Profile">
+        <div class="avatar-circle" style="background:{{ current_user.avatar_color|default:'#4f46e5' }};">
+          {{ current_user.initials|default:'AD' }}
+        </div>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main SaaS Layout -->
+  <div class="sprintly-layout">
+    <!-- Enterprise Sidebar Navigation -->
+    <aside class="sprintly-sidebar">
+      <div class="sidebar-menu">
+        <span class="menu-label">WORKSPACE</span>
+        <a href="{% url 'dashboard:home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="{% url 'dashboard:my_work' %}" class="nav-item {% if request.resolver_match.url_name == 'my_work' %}active{% endif %}">
+          <i data-lucide="check-square" style="width:18px;height:18px;"></i>
+          <span>My Work</span>
+        </a>
+        <a href="{% url 'projects:list' %}" class="nav-item {% if request.resolver_match.app_name == 'projects' and request.resolver_match.url_name == 'list' %}active{% endif %}">
+          <i data-lucide="folder" style="width:18px;height:18px;"></i>
+          <span>Projects</span>
+        </a>
+        <a href="{% if project.id %}/projects/{{ project.id }}/board/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'board' %}active{% endif %}">
+          <i data-lucide="trello" style="width:18px;height:18px;"></i>
+          <span>Board</span>
+        </a>
+        <a href="{% if project.id %}/projects/{{ project.id }}/backlog/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'backlog' %}active{% endif %}">
+          <i data-lucide="layers" style="width:18px;height:18px;"></i>
+          <span>Backlog</span>
+        </a>
+        <a href="{% if project.id %}/projects/{{ project.id }}/sprints/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'sprints' %}active{% endif %}">
+          <i data-lucide="zap" style="width:18px;height:18px;"></i>
+          <span>Sprints</span>
+        </a>
+        <a href="{% if project.id %}/projects/{{ project.id }}/roadmap/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'roadmap' %}active{% endif %}">
+          <i data-lucide="map" style="width:18px;height:18px;"></i>
+          <span>Roadmap</span>
+        </a>
+        <a href="{% if project.id %}/projects/{{ project.id }}/reports/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'reports' %}active{% endif %}">
+          <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i>
+          <span>Reports</span>
+        </a>
+
+        <span class="menu-label">COLLABORATION</span>
+        <a href="{% url 'notifications:team_chat' %}" class="nav-item {% if request.resolver_match.url_name == 'team_chat' or request.resolver_match.url_name == 'room_chat' %}active{% endif %}">
+          <i data-lucide="message-square" style="width:18px;height:18px;"></i>
+          <span>Team Chat</span>
+        </a>
+        <a href="{% if project.id %}/projects/{{ project.id }}/team/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'team' %}active{% endif %}">
+          <i data-lucide="users" style="width:18px;height:18px;"></i>
+          <span>Team</span>
+        </a>
+        <a href="{% url 'dashboard:activity' %}" class="nav-item {% if request.resolver_match.url_name == 'activity' %}active{% endif %}">
+          <i data-lucide="activity" style="width:18px;height:18px;"></i>
+          <span>Activity</span>
+        </a>
+        <a href="{% url 'notifications:inbox' %}" class="nav-item {% if request.resolver_match.url_name == 'inbox' %}active{% endif %}">
+          <i data-lucide="bell" style="width:18px;height:18px;"></i>
+          <span>Notifications</span>
+          {% if unread_notifications %}
+            <span class="sidebar-badge">{{ unread_notifications }}</span>
+          {% endif %}
+        </a>
+
+        <span class="menu-label">PERSONAL</span>
+        <a href="{% url 'accounts:profile' %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+          <i data-lucide="user" style="width:18px;height:18px;"></i>
+          <span>Profile</span>
+        </a>
+        <a href="{% url 'accounts:settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+          <i data-lucide="settings" style="width:18px;height:18px;"></i>
+          <span>Settings</span>
+        </a>
+      </div>
+
+      <!-- Sidebar Footer: Generic Business-Safe Status -->
+      <div class="sidebar-footer">
+        <div class="system-status-pill">
+          <div class="status-indicator-dot"></div>
+          <div class="status-content">
+            <span class="status-title">Platform Status</span>
+            <span class="status-desc">Operational</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main View Content Area -->
+    <main class="sprintly-main">
+      <!-- Django Flash Messages -->
+      {% if messages %}
+        <div class="messages-container">
+          {% for message in messages %}
+            <div class="alert-message alert-{{ message.tags }}">
+              <i data-lucide="info" style="width:16px;height:16px;"></i>
+              <span>{{ message }}</span>
+              <button class="alert-close-btn" onclick="this.parentElement.remove();">×</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% block content %}
+      {% endblock %}
+    </main>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODALS                                     -->
+  <!-- ========================================== -->
+
+  <!-- 1. Create Issue Modal -->
+  <div id="createIssueModal" class="modal-overlay">
+    <div class="modal-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h2 style="font-size:1.25rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+          <i data-lucide="plus-circle" style="width:20px;height:20px;color:var(--accent-primary);"></i>
+          <span>Create Issue</span>
+        </h2>
+        <button class="btn-icon" onclick="SprintlyApp.closeAllModals()"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+      </div>
+
+      <form onsubmit="SprintlyApp.submitCreateIssue(event)">
+        <div class="form-group">
+          <label class="form-label">Issue Title *</label>
+          <input type="text" id="createTitle" class="form-control" placeholder="e.g. Implement real-time team workload matrix" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea id="createDesc" class="form-control" rows="3" placeholder="Provide background context and acceptance criteria..."></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:-4px;margin-bottom:14px;">
+          <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;border-color:rgba(79,70,229,0.3);color:var(--accent-primary);" onclick="SprintlyApp.improveIssueWithAI()">
+            <i data-lucide="sparkles" style="width:13px;height:13px;"></i> Improve with AI
+          </button>
+          <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;" onclick="SprintlyApp.findSimilarIssuesWithAI()">
+            <i data-lucide="copy" style="width:13px;height:13px;"></i> Find Similar
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Project</label>
+            <select id="createProject" class="form-control">
+              {% for p in all_projects %}
+                <option value="{{ p.id }}" {% if p.id == project.id %}selected{% endif %}>{{ p.key }} - {{ p.name }}</option>
+              {% empty %}
+                <option value="" disabled selected>No projects available — create a project first</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Issue Type</label>
+            <select id="createType" class="form-control">
+              <option value="STORY">Story</option>
+              <option value="TASK" selected>Task</option>
+              <option value="BUG">Bug</option>
+              <option value="EPIC">Epic</option>
+              <option value="IMPROVEMENT">Improvement</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select id="createPriority" class="form-control">
+              <option value="LOW">Low</option>
+              <option value="MEDIUM" selected>Medium</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Story Points</label>
+            <input type="number" id="createPoints" class="form-control" value="3" min="1" max="21">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Due Date</label>
+            <input type="date" id="createDueDate" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Labels (comma-separated)</label>
+          <input type="text" id="createLabels" class="form-control" placeholder="frontend, ui, core-feature">
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+          <button type="button" class="btn-secondary" onclick="SprintlyApp.closeAllModals()">Cancel</button>
+          <button type="submit" class="btn-primary">Create Ticket</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Global Command Palette Modal (Ctrl+K) -->
+  <div id="commandPaletteModal" class="modal-overlay">
+    <div class="modal-card" style="max-width:550px;padding:20px;">
+      <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-subtle);padding-bottom:12px;">
+        <i data-lucide="search" style="width:20px;height:20px;color:var(--text-muted);"></i>
+        <input type="text" id="commandPaletteInput" class="form-control" placeholder="Search issues, projects, sprints (or jump to page)..." style="border:none;background:transparent;padding:0;font-size:1rem;" oninput="SprintlyApp.handleGlobalSearch(this.value)">
+      </div>
+      <div id="commandSearchResults" style="margin-top:14px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin:4px 0;">Quick Navigation</div>
+        <a href="{% url 'dashboard:home' %}" class="nav-item">
+          <i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Go to Dashboard
+        </a>
+        <a href="{% url 'dashboard:my_work' %}" class="nav-item">
+          <i data-lucide="check-square" style="width:16px;height:16px;"></i> View My Work
+        </a>
+        <a href="{% url 'projects:list' %}" class="nav-item">
+          <i data-lucide="folder" style="width:16px;height:16px;"></i> Browse Projects
+        </a>
+        <a href="/projects/{{ project.id|default:1 }}/board/" class="nav-item">
+          <i data-lucide="trello" style="width:16px;height:16px;"></i> Open Active Kanban Board
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Floating Sprintly AI Assistant Button -->
+  <button id="sprintlyAiFloatingBtn" class="ai-floating-btn" onclick="SprintlyAI.toggleDrawer()" title="Ask Sprintly AI">
+    <div class="ai-sparkle-icon"><i data-lucide="sparkles" style="width:16px;height:16px;"></i></div>
+    <span>Ask Sprintly AI</span>
+  </button>
+
+  <!-- 4. Sprintly AI Slide-Over Drawer Overlay & Panel -->
+  <div id="aiDrawerOverlay" class="ai-drawer-overlay" onclick="SprintlyAI.closeDrawer()"></div>
+  <aside id="sprintlyAiDrawer" class="ai-drawer">
+    <!-- Header -->
+    <div class="ai-drawer-header">
+      <div class="ai-drawer-title-group">
+        <div class="ai-avatar-badge">
+          <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
+        </div>
+        <div>
+          <div class="ai-drawer-title">Sprintly AI</div>
+          <div class="ai-drawer-subtitle">Agile Intelligence & Decision Support</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button class="btn-icon" onclick="SprintlyAI.clearChat()" title="Clear Chat">
+          <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+        </button>
+        <button class="btn-icon" onclick="SprintlyAI.closeDrawer()" title="Close Drawer">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Context Indicator -->
+    <div class="ai-context-banner">
+      <span style="color:var(--text-muted);font-weight:600;">ACTIVE CONTEXT:</span>
+      <div id="aiContextChip" class="ai-context-chip">
+        <i data-lucide="compass" style="width:14px;height:14px;"></i>
+        <span>Workspace Overview</span>
+      </div>
+    </div>
+
+    <!-- Contextual Suggestion Pills -->
+    <div class="ai-suggestions-container">
+      <span class="ai-suggestions-label">Suggested Actions</span>
+      <div id="aiSuggestionPills" class="ai-suggestions-pills">
+        <!-- Injected dynamically by SprintlyAI.renderSuggestions() -->
+      </div>
+    </div>
+
+    <!-- Messages Conversation Feed -->
+    <div id="aiChatThread" class="ai-chat-thread">
+      <div class="ai-msg-row">
+        <div class="ai-avatar-badge" style="width:28px;height:28px;font-size:0.75rem;"><i data-lucide="sparkles" style="width:14px;height:14px;"></i></div>
+        <div class="ai-msg-bubble bot">
+          Hello! I am <strong>Sprintly AI</strong>. I analyze your project data, plan sprints, identify delivery risks, improve issues, and answer questions. How can I help you today?
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Prompt Input Bar -->
+    <div class="ai-drawer-footer">
+      <div class="ai-input-wrapper">
+        <textarea id="aiChatInput" class="ai-chat-input" rows="1" placeholder="Ask Sprintly AI anything about your project..."></textarea>
+        <button class="ai-send-btn" onclick="SprintlyAI.handleSendMessage()" title="Send">
+          <i data-lucide="send" style="width:14px;height:14px;"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <script src="{% static 'js/sprintly.js' %}"></script>
+  <script>
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

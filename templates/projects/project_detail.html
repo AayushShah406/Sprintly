@@ -1,0 +1,1224 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.key }} - {{ project.name }} | Sprintly{% endblock %}
+
+{% block content %}
+<div class="project-workspace-container">
+  
+  <!-- Project Workspace Header -->
+  <div class="project-hero-banner">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="avatar-circle" style="background:{{ project.avatar_color }};width:48px;height:48px;font-size:1.2rem;border-radius:var(--radius-lg);">
+        {{ project.key }}
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <h1 style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">{{ project.name }}</h1>
+          <span class="status-pill status-{{ project.status }}">{{ project.status }}</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px;">
+          Key: <strong>{{ project.key }}</strong> • Category: <strong>{{ project.category }}</strong> • Lead: <strong>{{ project.lead.display_name|default:project.owner.display_name }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="btn-primary" onclick="SprintlyApp.openCreateIssueModal()">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i> Create Ticket
+      </button>
+    </div>
+  </div>
+
+  <!-- Project Sub-Navigation Tabs Bar -->
+  <div class="project-tabs-bar">
+    <a href="{% url 'projects:overview' project.id %}" class="project-tab-link {% if active_tab == 'overview' %}active{% endif %}">
+      <i data-lucide="layout" style="width:16px;height:16px;"></i> Overview
+    </a>
+    <a href="{% url 'projects:board' project.id %}" class="project-tab-link {% if active_tab == 'board' %}active{% endif %}">
+      <i data-lucide="trello" style="width:16px;height:16px;"></i> Board
+    </a>
+    <a href="{% url 'projects:backlog' project.id %}" class="project-tab-link {% if active_tab == 'backlog' %}active{% endif %}">
+      <i data-lucide="layers" style="width:16px;height:16px;"></i> Backlog
+    </a>
+    <a href="{% url 'projects:sprints' project.id %}" class="project-tab-link {% if active_tab == 'sprints' %}active{% endif %}">
+      <i data-lucide="zap" style="width:16px;height:16px;"></i> Sprints
+    </a>
+    <a href="{% url 'projects:roadmap' project.id %}" class="project-tab-link {% if active_tab == 'roadmap' %}active{% endif %}">
+      <i data-lucide="map" style="width:16px;height:16px;"></i> Roadmap
+    </a>
+    <a href="{% url 'projects:reports' project.id %}" class="project-tab-link {% if active_tab == 'reports' %}active{% endif %}">
+      <i data-lucide="bar-chart-2" style="width:16px;height:16px;"></i> Reports
+    </a>
+    <a href="{% url 'projects:team' project.id %}" class="project-tab-link {% if active_tab == 'team' %}active{% endif %}">
+      <i data-lucide="users" style="width:16px;height:16px;"></i> Team
+    </a>
+    <a href="{% url 'projects:activity' project.id %}" class="project-tab-link {% if active_tab == 'activity' %}active{% endif %}">
+      <i data-lucide="activity" style="width:16px;height:16px;"></i> Activity
+    </a>
+    <a href="{% url 'projects:settings' project.id %}" class="project-tab-link {% if active_tab == 'settings' %}active{% endif %}">
+      <i data-lucide="settings" style="width:16px;height:16px;"></i> Settings
+    </a>
+  </div>
+
+  <!-- Tab Content Containers -->
+
+  <!-- 1. TAB: OVERVIEW -->
+  {% if active_tab == 'overview' %}
+    <div class="tab-pane-content">
+      <!-- AI Action Quick Bar -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+        <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:6px 14px;border-color:rgba(79,70,229,0.35);color:var(--accent-primary);" onclick="SprintlyAI.triggerAction('project_summary')">
+          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Summarize Project
+        </button>
+        <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:6px 14px;" onclick="SprintlyAI.triggerAction('project_risks')">
+          <i data-lucide="shield-alert" style="width:14px;height:14px;color:#ef4444;"></i> Find Project Risks
+        </button>
+        <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:6px 14px;" onclick="SprintlyAI.triggerAction('plan_sprint')">
+          <i data-lucide="sparkles" style="width:14px;height:14px;"></i> AI Sprint Planner
+        </button>
+      </div>
+
+      <!-- 4 Top Project Stat Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-header"><span class="metric-label">Total Issues</span><i data-lucide="check-square" style="width:18px;height:18px;color:#4f46e5;"></i></div>
+          <div class="metric-value">{{ total_issues }}</div>
+          <div class="metric-subtext">{{ done_issues }} completed ({{ progress_pct }}%)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header"><span class="metric-label">Open Backlog / In Flight</span><i data-lucide="clock" style="width:18px;height:18px;color:#0284c7;"></i></div>
+          <div class="metric-value" style="color:#0284c7;">{{ open_issues }}</div>
+          <div class="metric-subtext">Unfinished work</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header"><span class="metric-label">Active Sprint</span><i data-lucide="zap" style="width:18px;height:18px;color:#7c3aed;"></i></div>
+          <div class="metric-value" style="font-size:1.3rem;font-weight:800;color:#7c3aed;">{{ active_sprint.name|default:'No Active Sprint' }}</div>
+          <div class="metric-subtext">{{ active_sprint.issues.count|default:0 }} sprint issues</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header"><span class="metric-label">Project Health</span><i data-lucide="activity" style="width:18px;height:18px;color:#10b981;"></i></div>
+          <div class="metric-value" style="color:#10b981;">{{ health_data.health_score|default:88 }} / 100</div>
+          <div class="metric-subtext">{{ health_data.status_label|default:'Healthy' }}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-top:20px;">
+        <!-- Left: Project Description & Active Sprint Burndown -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <div class="dash-card">
+            <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;">About This Project</h3>
+            <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6;">
+              {{ project.description|default:"No description provided for this project." }}
+            </p>
+          </div>
+
+          {% if active_sprint %}
+            <div class="dash-card">
+              <div class="dash-card-header">
+                <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);">Sprint Burndown Trajectory</h3>
+                <span class="badge-priority priority-LOW">Active Sprint</span>
+              </div>
+              <div style="height:220px;position:relative;">
+                <canvas id="projectOverviewBurndown"></canvas>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Right: Members & Key Dates -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <div class="dash-card">
+            <div class="dash-card-header">
+              <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);">Team Roster ({{ members.count }})</h3>
+              <a href="{% url 'projects:team' project.id %}" style="font-size:0.8rem;color:var(--accent-primary);font-weight:600;">Manage →</a>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              {% for m in members %}
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="avatar-circle" style="background:{{ m.user.avatar_color }};width:30px;height:30px;font-size:0.75rem;">
+                      {{ m.user.initials }}
+                    </div>
+                    <div>
+                      <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary);">{{ m.user.display_name }}</div>
+                      <div style="font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+                        <i data-lucide="shield" style="width:12px;height:12px;color:var(--accent-primary);"></i>
+                        {{ m.get_role_display }}
+                      </div>
+                    </div>
+                  </div>
+                  <span style="font-size:0.75rem;color:var(--text-secondary);">{{ m.capacity_hours_per_week }}h/wk</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- 2. TAB: BOARD (6-COLUMN KANBAN) -->
+  {% if active_tab == 'board' %}
+    <div class="tab-pane-content">
+      <div class="view-header" style="margin-bottom:16px;">
+        <div class="view-title-group">
+          <h2>Interactive Kanban Board</h2>
+          <div class="view-subtitle">Drag issues between columns to transition status. Changes persist automatically.</div>
+        </div>
+
+        <div class="filter-toolbar">
+          <select id="filterType" class="filter-select" onchange="SprintlyApp.filterBoard()">
+            <option value="">All Types</option>
+            <option value="STORY">Stories</option>
+            <option value="TASK">Tasks</option>
+            <option value="BUG">Bugs</option>
+            <option value="EPIC">Epics</option>
+            <option value="IMPROVEMENT">Improvements</option>
+          </select>
+
+          <select id="filterPriority" class="filter-select" onchange="SprintlyApp.filterBoard()">
+            <option value="">All Priorities</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="HIGH">High</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="LOW">Low</option>
+          </select>
+
+          <input type="text" id="searchIssuesInput" class="search-input" placeholder="Search title or ID..." oninput="SprintlyApp.filterBoard()">
+        </div>
+      </div>
+
+      <!-- 6 Columns Kanban Grid -->
+      <div class="kanban-board" style="grid-template-columns:repeat(6, 1fr);">
+        <!-- Column 1: Backlog -->
+        <div class="kanban-column" data-status="BACKLOG">
+          <div class="column-header">
+            <div class="col-title-group"><span class="col-dot dot-backlog"></span><span>BACKLOG</span></div>
+            <span id="count-backlog" class="col-count">0</span>
+          </div>
+          <div id="column-cards-backlog" class="column-cards"></div>
+        </div>
+
+        <!-- Column 2: To Do -->
+        <div class="kanban-column" data-status="TODO">
+          <div class="column-header">
+            <div class="col-title-group"><span class="col-dot dot-todo"></span><span>TO DO</span></div>
+            <span id="count-todo" class="col-count">0</span>
+          </div>
+          <div id="column-cards-todo" class="column-cards"></div>
+        </div>
+
+        <!-- Column 3: In Progress -->
+        <div class="kanban-column" data-status="IN_PROGRESS">
+          <div class="column-header">
+            <div class="col-title-group"><span class="col-dot dot-inprogress"></span><span>IN PROGRESS</span></div>
+            <span id="count-in_progress" class="col-count">0</span>
+          </div>
+          <div id="column-cards-in_progress" class="column-cards"></div>
+        </div>
+
+        <!-- Column 4: In Review -->
+        <div class="kanban-column" data-status="IN_REVIEW">
+          <div class="column-header">
+            <div class="col-title-group"><span class="col-dot dot-inreview"></span><span>IN REVIEW</span></div>
+            <span id="count-in_review" class="col-count">0</span>
+          </div>
+          <div id="column-cards-in_review" class="column-cards"></div>
+        </div>
+
+        <!-- Column 5: Blocked -->
+        <div class="kanban-column" data-status="BLOCKED">
+          <div class="column-header">
+            <div class="col-title-group"><span class="col-dot" style="background:#dc2626;"></span><span>BLOCKED</span></div>
+            <span id="count-blocked" class="col-count">0</span>
+          </div>
+          <div id="column-cards-blocked" class="column-cards"></div>
+        </div>
+
+        <!-- Column 6: Done -->
+        <div class="kanban-column" data-status="DONE">
+          <div class="column-header">
+            <div class="col-title-group"><span class="col-dot dot-done"></span><span>DONE</span></div>
+            <span id="count-done" class="col-count">0</span>
+          </div>
+          <div id="column-cards-done" class="column-cards"></div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- 3. TAB: BACKLOG (Sprint Buckets & Backlog Management) -->
+  {% if active_tab == 'backlog' %}
+    <div class="tab-pane-content">
+      
+      <!-- Backlog Header Toolbar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-primary);margin:0;">Backlog & Sprint Planning</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin:2px 0 0;">Prioritize unassigned backlog items and plan upcoming iterations.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="btn-secondary" style="border-color:rgba(79,70,229,0.35);color:var(--accent-primary);" onclick="SprintlyAI.triggerAction('plan_sprint')">
+            <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+            <span>Plan Sprint with AI</span>
+          </button>
+          <button type="button" class="btn-primary" onclick="document.getElementById('createSprintBacklogCard').style.display = document.getElementById('createSprintBacklogCard').style.display === 'none' ? 'block' : 'none'">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i>
+            <span>Create Sprint</span>
+          </button>
+          <button type="button" class="btn-secondary" onclick="SprintlyApp.openCreateIssueModal()">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i>
+            <span>Add Issue</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Create Sprint Collapsible Form -->
+      <div id="createSprintBacklogCard" class="dash-card" style="display:none;margin-bottom:24px;border:1.5px solid var(--accent-primary);background:var(--bg-card);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h4 style="font-size:1rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="zap" style="width:18px;height:18px;color:var(--accent-primary);"></i>
+            <span>Create New Sprint</span>
+          </h4>
+          <button type="button" class="btn-icon" onclick="document.getElementById('createSprintBacklogCard').style.display='none'"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+        </div>
+        <form method="POST">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Sprint Name *</label>
+              <input type="text" name="sprint_name" class="form-control" placeholder="e.g. Sprint {{ sprints.count|add:1 }}" required>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Duration (Days)</label>
+              <select name="duration_days" class="form-control">
+                <option value="7">1 Week (7 Days)</option>
+                <option value="14" selected>2 Weeks (14 Days)</option>
+                <option value="21">3 Weeks (21 Days)</option>
+                <option value="30">1 Month (30 Days)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Start Date</label>
+              <input type="date" name="start_date" class="form-control">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" style="font-size:0.8rem;">Sprint Goal</label>
+            <input type="text" name="sprint_goal" class="form-control" placeholder="What is the key deliverable or business objective?">
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('createSprintBacklogCard').style.display='none'">Cancel</button>
+            <button type="submit" class="btn-primary">Create Sprint</button>
+          </div>
+        </form>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(380px, 1fr));gap:24px;">
+        <!-- Active / Planned Sprints Bucket -->
+        <div class="dash-card">
+          <div class="dash-card-header">
+            <div>
+              <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                <i data-lucide="zap" style="width:16px;height:16px;color:#f59e0b;"></i>
+                <span>{{ active_sprint.name|default:'Active / Planned Sprint' }}</span>
+              </h3>
+              {% if active_sprint.goal %}
+                <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;">Goal: {{ active_sprint.goal }}</div>
+              {% endif %}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              {% if active_sprint %}
+                <span class="status-pill status-{{ active_sprint.status }}">{{ active_sprint.status }}</span>
+                {% if active_sprint.status == 'PLANNING' %}
+                  <form method="POST" action="{% url 'sprints:start' active_sprint.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary" style="font-size:0.75rem;padding:3px 8px;">Start Sprint</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="task-list-container" id="backlogSprintList">
+            {% for issue in active_sprint_issues %}
+              <div class="task-row-item">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+                  <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;font-size:0.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    {{ issue.key }} - {{ issue.title }}
+                  </a>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="badge-points">{{ issue.story_points }} pts</span>
+                  <form method="POST" style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="assign_issue_id" value="{{ issue.id }}">
+                    <input type="hidden" name="target_sprint_id" value="backlog">
+                    <button type="submit" class="btn-secondary" style="font-size:0.7rem;padding:2px 6px;" title="Move to Backlog">↓ Backlog</button>
+                  </form>
+                </div>
+              </div>
+            {% empty %}
+              <div style="padding:24px 16px;color:var(--text-muted);font-size:0.85rem;text-align:center;">
+                No issues currently assigned to this sprint.<br>
+                <span style="font-size:0.78rem;">Use the Move button on backlog items to add them here.</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Product Backlog Bucket -->
+        <div class="dash-card">
+          <div class="dash-card-header">
+            <div>
+              <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                <i data-lucide="layers" style="width:16px;height:16px;color:var(--accent-primary);"></i>
+                <span>Product Backlog (Unassigned)</span>
+              </h3>
+              <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;">{{ backlog_issues.count }} item(s) awaiting sprint assignment</div>
+            </div>
+            <button class="btn-primary" style="font-size:0.75rem;padding:4px 10px;" onclick="SprintlyApp.openCreateIssueModal()">+ Add Item</button>
+          </div>
+
+          <div class="task-list-container" id="backlogUnassignedList">
+            {% for issue in backlog_issues %}
+              <div class="task-row-item">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+                  <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;font-size:0.88rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    {{ issue.key }} - {{ issue.title }}
+                  </a>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="badge-points">{{ issue.story_points }} pts</span>
+                  {% if sprints %}
+                    <form method="POST" style="display:flex;align-items:center;gap:4px;">
+                      {% csrf_token %}
+                      <input type="hidden" name="assign_issue_id" value="{{ issue.id }}">
+                      <select name="target_sprint_id" class="form-control" style="font-size:0.72rem;padding:2px 4px;height:26px;" onchange="this.form.submit()">
+                        <option value="">Move to...</option>
+                        {% for s in sprints %}
+                          <option value="{{ s.id }}">{{ s.name }} ({{ s.status }})</option>
+                        {% endfor %}
+                      </select>
+                    </form>
+                  {% endif %}
+                </div>
+              </div>
+            {% empty %}
+              <div style="padding:24px 16px;color:var(--text-muted);font-size:0.85rem;text-align:center;">
+                Backlog is currently empty.<br>
+                <button type="button" class="btn-primary" style="margin-top:10px;font-size:0.8rem;padding:4px 12px;" onclick="SprintlyApp.openCreateIssueModal()">
+                  + Create Backlog Ticket
+                </button>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- 4. TAB: SPRINTS (Full Sprint Lifecycle) -->
+  {% if active_tab == 'sprints' %}
+    <div class="tab-pane-content">
+      
+      <!-- Sprints Toolbar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-primary);margin:0;">Sprint Management</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin:2px 0 0;">Manage agile iterations, track velocity, and monitor sprint health.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="btn-secondary" style="border-color:rgba(79,70,229,0.35);color:var(--accent-primary);" onclick="SprintlyAI.triggerAction('analyze_sprint')">
+            <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+            <span>Analyze Sprints with AI</span>
+          </button>
+          <button type="button" class="btn-primary" onclick="document.getElementById('createSprintTabCard').style.display = document.getElementById('createSprintTabCard').style.display === 'none' ? 'block' : 'none'">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i>
+            <span>Create Sprint</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Create Sprint Collapsible Form -->
+      <div id="createSprintTabCard" class="dash-card" style="display:none;margin-bottom:24px;border:1.5px solid var(--accent-primary);background:var(--bg-card);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h4 style="font-size:1rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="zap" style="width:18px;height:18px;color:var(--accent-primary);"></i>
+            <span>Create New Sprint for {{ project.name }}</span>
+          </h4>
+          <button type="button" class="btn-icon" onclick="document.getElementById('createSprintTabCard').style.display='none'"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+        </div>
+        <form method="POST">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Sprint Name *</label>
+              <input type="text" name="sprint_name" class="form-control" placeholder="e.g. Sprint {{ sprints.count|add:1 }}" required>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Duration</label>
+              <select name="duration_days" class="form-control">
+                <option value="7">1 Week (7 Days)</option>
+                <option value="14" selected>2 Weeks (14 Days)</option>
+                <option value="21">3 Weeks (21 Days)</option>
+                <option value="30">1 Month (30 Days)</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Start Date</label>
+              <input type="date" name="start_date" class="form-control">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" style="font-size:0.8rem;">Sprint Goal</label>
+            <input type="text" name="sprint_goal" class="form-control" placeholder="Deliverable or business goal...">
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('createSprintTabCard').style.display='none'">Cancel</button>
+            <button type="submit" class="btn-primary">Create Sprint</button>
+          </div>
+        </form>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        {% for s in sprints %}
+          <div class="dash-card">
+            <div class="dash-card-header" style="flex-wrap:wrap;gap:12px;">
+              <div>
+                <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+                  <span>{{ s.name }}</span>
+                  <span class="status-pill status-{{ s.status }}">{{ s.status }}</span>
+                </h3>
+                {% if s.goal %}
+                  <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px;">Goal: {{ s.goal }}</div>
+                {% endif %}
+              </div>
+
+              <div style="display:flex;align-items:center;gap:8px;">
+                {% if s.status == 'PLANNING' %}
+                  <form method="POST" action="{% url 'sprints:start' s.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary" style="font-size:0.8rem;padding:4px 12px;">
+                      <i data-lucide="play" style="width:12px;height:12px;"></i> Start Sprint
+                    </button>
+                  </form>
+                {% elif s.status == 'ACTIVE' %}
+                  <form method="POST" action="{% url 'sprints:complete' s.id %}" style="display:inline;" onsubmit="return confirm('Complete sprint and rollover incomplete tasks?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-secondary" style="font-size:0.8rem;padding:4px 12px;color:#10b981;border-color:#a7f3d0;">
+                      <i data-lucide="check" style="width:12px;height:12px;"></i> Complete Sprint
+                    </button>
+                  </form>
+                {% endif %}
+                <a href="{% url 'sprints:detail' s.id %}" class="btn-secondary" style="font-size:0.8rem;padding:4px 12px;">Health Details →</a>
+              </div>
+            </div>
+
+            <!-- Sprint Telemetry Metrics -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:12px;margin:16px 0;padding:12px;background:var(--bg-secondary);border-radius:var(--radius-md);">
+              <div><span style="font-size:0.72rem;color:var(--text-muted);font-weight:700;">TOTAL COMMITTED</span><div style="font-weight:800;font-size:1.1rem;color:var(--text-primary);">{{ s.total_committed_points|default:0 }} pts</div></div>
+              <div><span style="font-size:0.72rem;color:var(--text-muted);font-weight:700;">COMPLETED</span><div style="font-weight:800;font-size:1.1rem;color:#10b981;">{{ s.completed_points|default:0 }} pts</div></div>
+              <div><span style="font-size:0.72rem;color:var(--text-muted);font-weight:700;">TOTAL ISSUES</span><div style="font-weight:800;font-size:1.1rem;color:var(--text-primary);">{{ s.issues.count }}</div></div>
+              <div><span style="font-size:0.72rem;color:var(--text-muted);font-weight:700;">START DATE</span><div style="font-weight:700;font-size:0.9rem;color:var(--text-primary);">{{ s.start_date|default:'TBD' }}</div></div>
+              <div><span style="font-size:0.72rem;color:var(--text-muted);font-weight:700;">TARGET END</span><div style="font-weight:700;font-size:0.9rem;color:var(--text-primary);">{{ s.end_date|default:'TBD' }}</div></div>
+            </div>
+
+            <!-- Issues inside this sprint -->
+            <div class="task-list-container" style="max-height:220px;overflow-y:auto;">
+              {% for issue in s.issues.all %}
+                <div class="task-row-item" style="padding:8px 12px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                    <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;font-size:0.85rem;">
+                      {{ issue.key }} - {{ issue.title }}
+                    </a>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="badge-points">{{ issue.story_points }} pts</span>
+                    <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                    <span class="status-pill status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+                  </div>
+                </div>
+              {% empty %}
+                <div style="padding:14px;color:var(--text-muted);font-size:0.82rem;text-align:center;">
+                  No issues assigned to this sprint. Go to the Backlog tab to add items.
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="dash-card" style="text-align:center;padding:48px 24px;">
+            <div style="width:56px;height:56px;border-radius:50%;background:rgba(79,70,229,0.1);display:inline-flex;align-items:center;justify-content:center;color:var(--accent-primary);margin-bottom:14px;">
+              <i data-lucide="zap" style="width:28px;height:28px;"></i>
+            </div>
+            <h3 style="font-size:1.2rem;font-weight:800;color:var(--text-primary);margin-bottom:6px;">No Sprints Created Yet</h3>
+            <p style="font-size:0.88rem;color:var(--text-secondary);max-width:400px;margin:0 auto 20px;">
+              Create your first sprint to start organizing tasks, tracking team velocity, and monitoring agile delivery health.
+            </p>
+            <button type="button" class="btn-primary" onclick="document.getElementById('createSprintTabCard').style.display='block'">
+              <i data-lucide="plus" style="width:16px;height:16px;"></i>
+              <span>+ Create Sprint 1</span>
+            </button>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- 5. TAB: ROADMAP (Real-Time Interactive Gantt Chart & Epics) -->
+  {% if active_tab == 'roadmap' %}
+    <div class="tab-pane-content">
+      
+      <!-- Roadmap Toolbar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h3 style="font-size:1.2rem;font-weight:800;color:var(--text-primary);margin:0;">Interactive Gantt Roadmap</h3>
+            <span id="ganttLivePill" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:0.72rem;font-weight:700;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);">
+              <span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 2s infinite;"></span>
+              Live Synced
+            </span>
+          </div>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin:2px 0 0;">Visual schedule of Epics, Sprints, and Deliverable Milestones plotted in real time.</p>
+        </div>
+        
+        <div style="display:flex;align-items:center;gap:10px;">
+          <!-- Filter Buttons -->
+          <div style="display:flex;background:var(--bg-secondary);padding:3px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+            <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:3px 10px;border:none;" onclick="filterGantt('ALL')">All</button>
+            <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:3px 10px;border:none;" onclick="filterGantt('EPIC')">Epics</button>
+            <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:3px 10px;border:none;" onclick="filterGantt('SPRINT')">Sprints</button>
+          </div>
+
+          <button type="button" class="btn-primary" onclick="document.getElementById('createEpicCard').style.display = document.getElementById('createEpicCard').style.display === 'none' ? 'block' : 'none'">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i>
+            <span>Create Epic</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Create Epic Collapsible Card -->
+      <div id="createEpicCard" class="dash-card" style="display:none;margin-bottom:24px;border:1.5px solid #7c3aed;background:var(--bg-card);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h4 style="font-size:1rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="map" style="width:18px;height:18px;color:#7c3aed;"></i>
+            <span>Create Strategic Epic</span>
+          </h4>
+          <button type="button" class="btn-icon" onclick="document.getElementById('createEpicCard').style.display='none'"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+        </div>
+        <form method="POST">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Epic Title *</label>
+              <input type="text" name="epic_title" class="form-control" placeholder="e.g. Enterprise Security & SSO Infrastructure" required>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Priority</label>
+              <select name="epic_priority" class="form-control">
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH" selected>High</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="LOW">Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" style="font-size:0.8rem;">Epic Description</label>
+            <textarea name="epic_description" class="form-control" rows="2" placeholder="Define the business initiative and success criteria..."></textarea>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('createEpicCard').style.display='none'">Cancel</button>
+            <button type="submit" class="btn-primary" style="background:#7c3aed;">Create Epic</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Real-Time Gantt Chart Container -->
+      <div class="dash-card" style="padding:0;overflow:hidden;border:1px solid var(--border-subtle);">
+        
+        <!-- Gantt View Header -->
+        <div style="display:grid;grid-template-columns:300px 1fr;background:var(--bg-secondary);border-bottom:1px solid var(--border-subtle);font-weight:700;font-size:0.8rem;color:var(--text-muted);">
+          <div style="padding:14px 18px;border-right:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;">
+            <span>INITIATIVE / DELIVERABLE</span>
+            <span>PROGRESS</span>
+          </div>
+          
+          <!-- Horizontal Timeline Header Columns -->
+          <div id="ganttTimelineHeader" style="display:flex;align-items:center;overflow-x:auto;padding:14px 0;">
+            {% for week in gantt_data.timeline_weeks %}
+              <div style="flex:1;min-width:80px;text-align:center;border-left:1px dashed var(--border-subtle);font-size:0.75rem;">
+                {{ week.label }}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Gantt Body Rows -->
+        <div id="ganttBodyRows" style="display:flex;flex-direction:column;min-height:220px;position:relative;">
+          {% for item in gantt_data.items %}
+            <div class="gantt-row" data-type="{{ item.type }}" style="display:grid;grid-template-columns:300px 1fr;border-bottom:1px solid var(--border-subtle);transition:background 0.2s;" onmouseenter="this.style.background='var(--bg-secondary)'" onmouseleave="this.style.background='transparent'">
+              
+              <!-- Left Item Meta -->
+              <div style="padding:12px 18px;border-right:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;min-width:0;gap:8px;">
+                <div style="min-width:0;display:flex;align-items:center;gap:8px;">
+                  <span class="type-badge-pill type-{{ item.type }}" style="font-size:0.65rem;">{{ item.type }}</span>
+                  <strong style="color:var(--text-primary);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    {{ item.key }} - {{ item.title }}
+                  </strong>
+                </div>
+                <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">{{ item.progress }}%</span>
+              </div>
+
+              <!-- Right Gantt Bar Track -->
+              <div style="position:relative;display:flex;align-items:center;padding:8px 0;background:repeating-linear-gradient(90deg, transparent, transparent 79px, var(--border-subtle) 80px);">
+                <div class="gantt-bar" style="position:absolute;left:{{ item.left_pct }}%;width:{{ item.width_pct }}%;height:28px;background:{{ item.color }};border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,0.15);display:flex;align-items:center;padding:0 8px;cursor:pointer;transition:all 0.3s;" title="{{ item.title }} ({{ item.start_date }} → {{ item.end_date }})">
+                  <!-- Inner Progress Fill -->
+                  <div style="position:absolute;left:0;top:0;bottom:0;width:{{ item.progress }}%;background:rgba(255,255,255,0.25);border-radius:6px 0 0 6px;"></div>
+                  <span style="position:relative;color:#ffffff;font-size:0.75rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    {{ item.title }} ({{ item.duration_days }}d)
+                  </span>
+                </div>
+              </div>
+            </div>
+          {% empty %}
+            <div style="padding:48px 24px;text-align:center;color:var(--text-muted);font-size:0.9rem;">
+              No Epics or Sprints scheduled on the timeline yet.<br>
+              <button type="button" class="btn-primary" style="margin-top:12px;font-size:0.8rem;" onclick="document.getElementById('createEpicCard').style.display='block'">
+                + Create First Epic Milestone
+              </button>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Real-Time Auto-Polling Live Sync Script -->
+      <script>
+        let currentGanttFilter = "ALL";
+
+        function filterGantt(type) {
+          currentGanttFilter = type;
+          const rows = document.querySelectorAll(".gantt-row");
+          rows.forEach(r => {
+            if (type === "ALL" || r.dataset.type === type) {
+              r.style.display = "grid";
+            } else {
+              r.style.display = "none";
+            }
+          });
+        }
+
+        async function refreshGanttRealTime() {
+          try {
+            const projectId = "{{ project.id }}";
+            if (!projectId) return;
+            const res = await fetch(`/api/projects/${projectId}/roadmap/gantt/`);
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            const body = document.getElementById("ganttBodyRows");
+            if (!body || !data.items) return;
+
+            if (data.items.length === 0) {
+              body.innerHTML = `
+                <div style="padding:48px 24px;text-align:center;color:var(--text-muted);font-size:0.9rem;">
+                  No Epics or Sprints scheduled on the timeline yet.<br>
+                  <button type="button" class="btn-primary" style="margin-top:12px;font-size:0.8rem;" onclick="document.getElementById('createEpicCard').style.display='block'">
+                    + Create First Epic Milestone
+                  </button>
+                </div>`;
+              return;
+            }
+
+            let html = "";
+            data.items.forEach(item => {
+              const isVisible = currentGanttFilter === "ALL" || currentGanttFilter === item.type;
+              html += `
+                <div class="gantt-row" data-type="${item.type}" style="display:${isVisible ? 'grid' : 'none'};grid-template-columns:300px 1fr;border-bottom:1px solid var(--border-subtle);transition:background 0.2s;" onmouseenter="this.style.background='var(--bg-secondary)'" onmouseleave="this.style.background='transparent'">
+                  <div style="padding:12px 18px;border-right:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;min-width:0;gap:8px;">
+                    <div style="min-width:0;display:flex;align-items:center;gap:8px;">
+                      <span class="type-badge-pill type-${item.type}" style="font-size:0.65rem;">${item.type}</span>
+                      <strong style="color:var(--text-primary);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${item.key} - ${item.title}
+                      </strong>
+                    </div>
+                    <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);">${item.progress}%</span>
+                  </div>
+                  <div style="position:relative;display:flex;align-items:center;padding:8px 0;background:repeating-linear-gradient(90deg, transparent, transparent 79px, var(--border-subtle) 80px);">
+                    <div class="gantt-bar" style="position:absolute;left:${item.left_pct}%;width:${item.width_pct}%;height:28px;background:${item.color};border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,0.15);display:flex;align-items:center;padding:0 8px;cursor:pointer;transition:all 0.3s;" title="${item.title} (${item.start_date} → ${item.end_date})">
+                      <div style="position:absolute;left:0;top:0;bottom:0;width:${item.progress}%;background:rgba(255,255,255,0.25);border-radius:6px 0 0 6px;"></div>
+                      <span style="position:relative;color:#ffffff;font-size:0.75rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${item.title} (${item.duration_days}d)
+                      </span>
+                    </div>
+                  </div>
+                </div>`;
+            });
+            body.innerHTML = html;
+          } catch (e) {
+            console.warn("Gantt Live Sync error:", e);
+          }
+        }
+
+        // Live Real-Time Auto Polling every 8 seconds
+        setInterval(refreshGanttRealTime, 8000);
+      </script>
+    </div>
+  {% endif %}
+
+  <!-- 6. TAB: REPORTS (100% Dynamic Database Charts) -->
+  {% if active_tab == 'reports' %}
+    <div class="tab-pane-content">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <!-- Sprint Velocity -->
+        <div class="dash-card">
+          <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);margin-bottom:12px;">Historical Velocity (Story Points)</h3>
+          <div style="height:240px;position:relative;">
+            <canvas id="velocityChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Issue Breakdown by Priority -->
+        <div class="dash-card">
+          <h3 style="font-size:1.05rem;font-weight:700;color:var(--text-primary);margin-bottom:12px;">Issue Distribution by Priority</h3>
+          <div style="height:240px;position:relative;">
+            <canvas id="priorityDistributionChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        document.addEventListener("DOMContentLoaded", () => {
+          if (window.Chart) {
+            // Velocity Chart
+            const vCanvas = document.getElementById("velocityChart");
+            if (vCanvas) {
+              const labels = {{ velocity_labels_json|safe }};
+              const committed = {{ velocity_committed_json|safe }};
+              const completed = {{ velocity_completed_json|safe }};
+              new Chart(vCanvas, {
+                type: "bar",
+                data: {
+                  labels: labels,
+                  datasets: [
+                    { label: "Committed Points", data: committed, backgroundColor: "#94a3b8" },
+                    { label: "Completed Points", data: completed, backgroundColor: "#10b981" }
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: { y: { beginAtZero: true } }
+                }
+              });
+            }
+
+            // Priority Chart
+            const pCanvas = document.getElementById("priorityDistributionChart");
+            if (pCanvas) {
+              const pData = {{ priority_counts_json|safe }};
+              new Chart(pCanvas, {
+                type: "doughnut",
+                data: {
+                  labels: ["Critical", "High", "Medium", "Low"],
+                  datasets: [{ data: pData, backgroundColor: ["#dc2626", "#ea580c", "#f59e0b", "#4f46e5"] }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { position: "right" } }
+                }
+              });
+            }
+          }
+        });
+      </script>
+    </div>
+  {% endif %}
+
+  <!-- 7. TAB: TEAM (With Enterprise Teammate Addition & Role Assignment) -->
+  {% if active_tab == 'team' %}
+    <div class="tab-pane-content">
+      
+      <!-- Top Action Toolbar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-primary);margin:0;">Project Team & Work Allocation</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin:2px 0 0;">Manage project members, assign tasks manually, or optimize with AI.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <!-- Option A: AI Smart Allocation -->
+          <button type="button" class="btn-secondary" style="border-color:rgba(79,70,229,0.4);color:var(--accent-primary);" onclick="triggerAiWorkAllocation()">
+            <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+            <span>AI Work Allocation</span>
+          </button>
+          
+          <!-- Option B: Manual Allocation -->
+          <button type="button" class="btn-secondary" onclick="document.getElementById('manualAllocationCard').style.display = document.getElementById('manualAllocationCard').style.display === 'none' ? 'block' : 'none'">
+            <i data-lucide="user-check" style="width:14px;height:14px;"></i>
+            <span>Manual Allocation</span>
+          </button>
+
+          <!-- Add Teammate -->
+          <button type="button" class="btn-primary" onclick="document.getElementById('addTeammateCard').style.display = document.getElementById('addTeammateCard').style.display === 'none' ? 'block' : 'none'">
+            <i data-lucide="user-plus" style="width:16px;height:16px;"></i>
+            <span>Add New Teammate</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- AI Work Allocation Interactive Card -->
+      <div id="aiAllocationCard" class="dash-card" style="display:none;margin-bottom:24px;border:1.5px solid var(--accent-primary);background:var(--bg-card);box-shadow:0 8px 24px rgba(79,70,229,0.12);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h4 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="sparkles" style="width:18px;height:18px;color:var(--accent-primary);"></i>
+            <span>AI Work Allocation Optimization</span>
+          </h4>
+          <button type="button" class="btn-icon" onclick="document.getElementById('aiAllocationCard').style.display='none'"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+        </div>
+        <div id="aiAllocationContent">
+          <div style="text-align:center;padding:24px;color:var(--text-muted);">
+            <i data-lucide="loader" style="width:24px;height:24px;animation:spin 1s linear infinite;"></i>
+            <div style="margin-top:8px;">Analyzing team velocity, capacity, and ticket complexity...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manual Work Allocation Interactive Card -->
+      <div id="manualAllocationCard" class="dash-card" style="display:none;margin-bottom:24px;border:1.5px solid var(--border-subtle);background:var(--bg-card);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h4 style="font-size:1rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="user-check" style="width:18px;height:18px;color:var(--accent-primary);"></i>
+            <span>Manual Task Assignment</span>
+          </h4>
+          <button type="button" class="btn-icon" onclick="document.getElementById('manualAllocationCard').style.display='none'"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+        </div>
+        <div class="task-list-container" style="max-height:280px;overflow-y:auto;">
+          {% for issue in all_issues %}
+            {% if not issue.assignee or issue.status != 'DONE' %}
+              <div class="task-row-item" style="padding:10px 14px;">
+                <div style="min-width:0;flex:1;display:flex;align-items:center;gap:8px;">
+                  <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                  <strong style="font-size:0.85rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    {{ issue.key }}: {{ issue.title }}
+                  </strong>
+                  <span class="badge-points">{{ issue.story_points }} pts</span>
+                </div>
+                <form method="POST" action="{% url 'issues:edit' issue.id %}" style="display:flex;align-items:center;gap:6px;">
+                  {% csrf_token %}
+                  <select name="assignee_id" class="form-control" style="font-size:0.75rem;padding:3px 8px;height:30px;" onchange="this.form.submit()">
+                    <option value="">Select Teammate...</option>
+                    {% for m in members %}
+                      <option value="{{ m.user.id }}" {% if issue.assignee.id == m.user.id %}selected{% endif %}>
+                        {{ m.user.display_name }} ({{ m.get_role_display }})
+                      </option>
+                    {% endfor %}
+                  </select>
+                </form>
+              </div>
+            {% endif %}
+          {% empty %}
+            <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.85rem;">No active tasks to allocate.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Add / Invite Teammate Card (Collapsible/Interactive) -->
+      <div id="addTeammateCard" class="dash-card" style="margin-bottom:24px;border:1.5px solid var(--accent-primary);background:var(--bg-card);box-shadow:0 8px 24px rgba(79,70,229,0.08);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <h4 style="font-size:1rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+            <i data-lucide="user-plus" style="width:18px;height:18px;color:var(--accent-primary);"></i>
+            <span>Add / Invite New Teammate to {{ project.name }}</span>
+          </h4>
+          <button type="button" class="btn-icon" onclick="document.getElementById('addTeammateCard').style.display='none'"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+        </div>
+
+        <form method="POST">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">First Name *</label>
+              <input type="text" name="new_teammate_first_name" class="form-control" placeholder="e.g. Sarah" required>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Last Name</label>
+              <input type="text" name="new_teammate_last_name" class="form-control" placeholder="e.g. Connor">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Email Address *</label>
+              <input type="email" name="new_teammate_email" class="form-control" placeholder="sarah.connor@example.com" required>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:16px;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Job Title</label>
+              <input type="text" name="new_teammate_title" class="form-control" placeholder="e.g. Senior Frontend Engineer" value="Software Engineer">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Project Role</label>
+              <select name="new_teammate_role" class="form-control">
+                <option value="DEVELOPER" selected>Software Developer</option>
+                <option value="MANAGER">Project Manager / Scrum Master</option>
+                <option value="TESTER">QA / Tester</option>
+                <option value="VIEWER">Stakeholder / Viewer</option>
+                <option value="OWNER">Project Co-Owner</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.8rem;">Weekly Capacity (Hrs)</label>
+              <input type="number" name="new_teammate_capacity" class="form-control" value="40" min="5" max="80">
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('addTeammateCard').style.display='none'">Cancel</button>
+            <button type="submit" class="btn-primary">
+              <i data-lucide="check" style="width:14px;height:14px;"></i>
+              <span>Add Teammate</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Quick Assign Role to Existing Workspace Member (if any available) -->
+      {% if available_users %}
+        <div class="dash-card" style="margin-bottom:24px;">
+          <h4 style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+            <i data-lucide="users" style="width:16px;height:16px;color:var(--accent-primary);"></i>
+            <span>Add Existing Workspace Member to Project</span>
+          </h4>
+          <form method="POST" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            {% csrf_token %}
+            <select name="member_user_id" class="form-control" style="flex:2;min-width:200px;" required>
+              <option value="">Select Existing User...</option>
+              {% for u in available_users %}
+                <option value="{{ u.id }}">{{ u.display_name }} ({{ u.email }})</option>
+              {% endfor %}
+            </select>
+
+            <select name="member_role" class="form-control" style="flex:1;min-width:160px;">
+              <option value="DEVELOPER" selected>Software Developer</option>
+              <option value="MANAGER">Project Manager / Scrum Master</option>
+              <option value="TESTER">QA / Tester</option>
+              <option value="VIEWER">Stakeholder / Viewer</option>
+            </select>
+
+            <button type="submit" class="btn-primary">Add to Project</button>
+          </form>
+        </div>
+      {% endif %}
+
+      <!-- Member Cards Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:20px;">
+        {% for m in members %}
+          <div class="project-card-full" style="position:relative;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="avatar-circle" style="background:{{ m.user.avatar_color }};width:44px;height:44px;font-size:1.05rem;">
+                {{ m.user.initials }}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:1rem;font-weight:800;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.user.display_name }}</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.user.email }}</div>
+              </div>
+            </div>
+
+            <div style="margin:14px 0;padding:10px 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;font-size:0.85rem;">
+              <span style="color:var(--text-secondary);">Project Role:</span>
+              <span class="type-badge-pill" style="background:rgba(79,70,229,0.1);color:var(--accent-primary);font-weight:700;">{{ m.get_role_display }}</span>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;">
+              <div>
+                <span style="color:var(--text-secondary);">Capacity:</span>
+                <strong style="color:#10b981;margin-left:4px;">{{ m.capacity_hours_per_week }} hrs/wk</strong>
+              </div>
+
+              {% if m.role != 'OWNER' and members.count > 1 %}
+                <form method="POST" onsubmit="return confirm('Remove {{ m.user.display_name }} from this project?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="remove_member_id" value="{{ m.id }}">
+                  <button type="submit" class="btn-secondary" style="font-size:0.75rem;padding:3px 8px;color:#dc2626;border-color:#fecaca;">Remove</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- 8. TAB: ACTIVITY -->
+  {% if active_tab == 'activity' %}
+    <div class="tab-pane-content">
+      <div class="dash-card">
+        <div class="activity-timeline">
+          {% for log in activity_logs %}
+            <div class="activity-item">
+              <div class="activity-dot"></div>
+              <div class="activity-body">
+                <div style="font-size:0.9rem;color:var(--text-primary);">
+                  <strong>{{ log.actor.display_name|default:'System' }}</strong> {{ log.action }} on 
+                  <a href="{% url 'issues:detail' log.issue.id %}" style="color:var(--accent-primary);font-weight:700;text-decoration:none;">{{ log.issue.key }}</a>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">{{ log.created_at|timesince }} ago</div>
+              </div>
+            </div>
+          {% empty %}
+            <div style="padding:16px;color:var(--text-muted);text-align:center;">No project activity logs yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- 9. TAB: SETTINGS -->
+  {% if active_tab == 'settings' %}
+    <div class="tab-pane-content">
+      <div style="display:flex;flex-direction:column;gap:24px;max-width:700px;">
+        <div class="dash-card">
+          <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-bottom:14px;">Project Configuration</h3>
+          <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+              <label class="form-label">Project Name</label>
+              <input type="text" name="name" class="form-control" value="{{ project.name }}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea name="description" class="form-control" rows="3">{{ project.description }}</textarea>
+            </div>
+            <button type="submit" class="btn-primary">Save Changes</button>
+          </form>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="dash-card" style="border:1px solid #fecaca;background:rgba(239, 68, 68, 0.03);">
+          <h3 style="font-size:1.1rem;font-weight:800;color:#dc2626;margin-bottom:8px;">Danger Zone</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:14px;">
+            Archiving or deleting a project affects all associated tickets, sprints, and subtasks.
+          </p>
+
+          <div style="display:flex;gap:12px;">
+            <a href="{% url 'projects:archive' project.id %}" class="btn-secondary" style="color:#d97706;border-color:#fde68a;" onclick="return confirm('Archive this project?');">
+              Archive Project
+            </a>
+            <form method="POST" action="{% url 'projects:delete' project.id %}" onsubmit="return confirm('Permanently delete project {{ project.name }}? This action cannot be undone.');">
+              {% csrf_token %}
+              <button type="submit" class="btn-primary" style="background:#dc2626;border-color:#dc2626;">
+                Delete Project
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+  async function triggerAiWorkAllocation() {
+    const card = document.getElementById('aiAllocationCard');
+    const content = document.getElementById('aiAllocationContent');
+    if (!card || !content) return;
+    
+    card.style.display = 'block';
+    content.innerHTML = `
+      <div style="text-align:center;padding:24px;color:var(--text-muted);">
+        <i data-lucide="loader" style="width:24px;height:24px;animation:spin 1s linear infinite;"></i>
+        <div style="margin-top:8px;">Analyzing team velocity, capacity, and ticket complexity...</div>
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const res = await fetch("/api/ai/allocate-work/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": SprintlyApp.getCsrfToken()
+        },
+        body: JSON.stringify({ project_id: "{{ project.id }}" })
+      });
+      const data = await res.json();
+      
+      if (data.allocations && data.allocations.length > 0) {
+        let rows = data.allocations.map(a => `
+          <div class="task-row-item" style="padding:10px 14px;background:var(--bg-secondary);margin-bottom:8px;border-radius:var(--radius-md);">
+            <div style="min-width:0;flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="type-badge-pill type-${a.issue_type}">${a.issue_type}</span>
+                <strong style="font-size:0.88rem;color:var(--text-primary);">${a.issue_key}: ${a.issue_title}</strong>
+                <span class="badge-points">${a.story_points} pts</span>
+              </div>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">${a.reasoning}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <div class="avatar-circle" style="background:${a.assigned_to.avatar_color};width:28px;height:28px;font-size:0.7rem;">
+                ${a.assigned_to.name.substring(0,2).toUpperCase()}
+              </div>
+              <div>
+                <strong style="font-size:0.8rem;color:var(--text-primary);">${a.assigned_to.name}</strong>
+                <div style="font-size:0.68rem;color:var(--text-muted);">${a.assigned_to.title}</div>
+              </div>
+            </div>
+          </div>
+        `).join("");
+
+        content.innerHTML = `
+          <div style="margin-bottom:14px;">
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 12px;">
+              Sprintly AI optimized workload distribution for <strong>${data.total_allocated_issues} issue(s)</strong> across your active engineering team.
+            </p>
+            <div style="max-height:260px;overflow-y:auto;margin-bottom:14px;">
+              ${rows}
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+              <button type="button" class="btn-secondary" onclick="document.getElementById('aiAllocationCard').style.display='none'">Dismiss</button>
+              <button type="button" class="btn-primary" onclick='applyAiAllocation(${JSON.stringify(data.allocations)})'>
+                <i data-lucide="check" style="width:14px;height:14px;"></i> Apply All Allocations
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        content.innerHTML = `
+          <div style="text-align:center;padding:24px;color:var(--text-muted);">
+            All issues in this project are already assigned to active team members!
+          </div>`;
+      }
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      content.innerHTML = `<div style="color:#ef4444;padding:16px;text-align:center;">Failed to generate AI allocation. Please try again.</div>`;
+    }
+  }
+
+  async function applyAiAllocation(allocations) {
+    try {
+      const res = await fetch("/api/ai/apply-action/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": SprintlyApp.getCsrfToken()
+        },
+        body: JSON.stringify({
+          action_type: "APPLY_WORK_ALLOCATION",
+          payload: { allocations: allocations }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        SprintlyApp.showToast(data.message, "success");
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        SprintlyApp.showToast(data.error || "Failed to apply allocations.", "error");
+      }
+    } catch (e) {
+      SprintlyApp.showToast("Failed to apply allocations.", "error");
+    }
+  }
+</script>
+{% endblock %}

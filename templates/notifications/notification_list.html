@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications Inbox | Sprintly{% endblock %}
+
+{% block content %}
+<div class="dashboard-page-container" style="max-width:850px;margin:0 auto;">
+  
+  <div class="view-header">
+    <div class="view-title-group">
+      <h1>
+        <i data-lucide="bell" style="width:26px;height:26px;color:#4f46e5;"></i>
+        <span>Notifications Inbox</span>
+      </h1>
+      <div class="view-subtitle">Stay updated on ticket assignments, status transitions, and sprint activity.</div>
+    </div>
+
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="mark_all_read" value="1">
+      <button type="submit" class="btn-secondary">
+        <i data-lucide="check-check" style="width:16px;height:16px;"></i> Mark All as Read
+      </button>
+    </form>
+  </div>
+
+  <div class="dash-card" style="margin-top:20px;">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      {% for notif in notifications %}
+        <div class="task-row-item" style="{% if not notif.is_read %}background:rgba(79, 70, 229, 0.04);border-left:3px solid #4f46e5;{% endif %}">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div class="avatar-circle" style="background:#4f46e5;width:32px;height:32px;font-size:0.75rem;margin-top:2px;">
+              <i data-lucide="info" style="width:16px;height:16px;"></i>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);">{{ notif.title }}</div>
+              <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px;line-height:1.4;">{{ notif.message }}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">{{ notif.created_at|timesince }} ago</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            {% if notif.link %}
+              <a href="{% url 'notifications:mark_read' notif.id %}" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;">View →</a>
+            {% endif %}
+            <a href="{% url 'notifications:delete' notif.id %}" class="btn-icon" style="color:var(--text-muted);" title="Dismiss"><i data-lucide="x" style="width:14px;height:14px;"></i></a>
+          </div>
+        </div>
+      {% empty %}
+        <div style="padding:32px;text-align:center;color:var(--text-muted);">
+          <i data-lucide="inbox" style="width:48px;height:48px;margin-bottom:10px;opacity:0.5;"></i>
+          <div style="font-weight:700;color:var(--text-primary);">No notifications</div>
+          <div style="font-size:0.85rem;margin-top:4px;">You are all caught up!</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
