@@ -21,7 +21,7 @@
           <button type="submit" class="btn-primary"><i data-lucide="play" style="width:16px;height:16px;"></i> Start Sprint</button>
         </form>
       {% elif sprint.status == 'ACTIVE' %}
-        <button class="btn-primary" onclick="document.getElementById('completeSprintModal').classList.add('active');">
+        <button class="btn-primary" onclick="SprintlyApp.openCompleteSprintModal({{ sprint.id }}, '{{ sprint.name|escapejs }}')">
           <i data-lucide="check-circle" style="width:16px;height:16px;"></i> Complete Sprint
         </button>
       {% endif %}
@@ -86,29 +86,31 @@
 <div id="completeSprintModal" class="modal-overlay">
   <div class="modal-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-      <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-primary);">Complete {{ sprint.name }}</h2>
-      <button class="btn-icon" onclick="document.getElementById('completeSprintModal').classList.remove('active');"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+      <h2 id="completeSprintModalTitle" style="font-size:1.25rem;font-weight:700;color:var(--text-primary);">Complete {{ sprint.name }}</h2>
+      <button class="btn-icon" onclick="SprintlyApp.closeCompleteSprintModal()"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
     </div>
 
     <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:16px;">
       This sprint contains <strong>{{ remaining_pts }} story points</strong> of incomplete work. Where would you like to move incomplete issues?
     </p>
 
-    <form method="POST" action="{% url 'sprints:complete' sprint.id %}">
+    <form method="POST" action="{% url 'sprints:complete' sprint.id %}" id="completeSprintModalForm" data-sprint-id="{{ sprint.id }}" onsubmit="SprintlyApp.submitCompleteSprint(event)">
       {% csrf_token %}
       <div class="form-group">
         <label class="form-label">Move Incomplete Issues To:</label>
         <select name="target_sprint_id" class="form-control">
-          <option value="backlog">Product Backlog (Unassigned)</option>
+          <option value="backlog">📦 Product Backlog (Unassigned)</option>
           {% for next_s in future_sprints %}
-            <option value="{{ next_s.id }}">{{ next_s.name }} (Planned)</option>
+            <option value="{{ next_s.id }}">⚡ {{ next_s.name }} (Planned)</option>
           {% endfor %}
         </select>
       </div>
 
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
-        <button type="button" class="btn-secondary" onclick="document.getElementById('completeSprintModal').classList.remove('active');">Cancel</button>
-        <button type="submit" class="btn-primary">Confirm & Complete Sprint</button>
+        <button type="button" class="btn-secondary" onclick="SprintlyApp.closeCompleteSprintModal()">Cancel</button>
+        <button type="submit" class="btn-primary" id="confirmCompleteSprintBtn" style="background:#10b981;border-color:#10b981;">
+          <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Confirm & Complete Sprint
+        </button>
       </div>
     </form>
   </div>

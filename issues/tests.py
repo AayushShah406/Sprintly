@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 from accounts.models import User
-from projects.models import Project
+from projects.models import Project, ProjectMember
 from sprints.models import Sprint
 from issues.models import Issue, SubTask
 
@@ -10,7 +10,10 @@ class IssueAndKanbanTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(username="alex", email="alex@sprintly.io", password="password123")
+        self.client.force_login(self.user)
+        self.client.force_authenticate(user=self.user)
         self.project = Project.objects.create(name="Platform Core", key="PLT", owner=self.user)
+        ProjectMember.objects.create(project=self.project, user=self.user, role="OWNER")
         self.sprint = Sprint.objects.create(project=self.project, name="Sprint 1", sprint_number=1, status="ACTIVE")
         self.issue = Issue.objects.create(
             project=self.project,

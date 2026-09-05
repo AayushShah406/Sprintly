@@ -1,30 +1,39 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework.authentication import SessionAuthentication
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import Issue, SubTask, Comment, IssueAttachment, IssueLink, IssueAuditLog
 from projects.models import Project
+from projects.views import check_project_access
 from sprints.models import Sprint
 from accounts.models import User
 from analytics.health_service import SprintHealthEngine
 
-def get_current_user(request):
-    if request.user.is_authenticated:
-        return request.user
-    return User.objects.first()
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return  # Allow drag-and-drop actions without CSRF failure
+
 
 # 1. Full-Page Issue Detail View
+@login_required
 def issue_detail_page(request, pk):
     issue = get_object_or_404(
         Issue.objects.select_related("project", "sprint", "epic", "assignee", "reporter")
         .prefetch_related("subtasks", "comments__author", "attachments", "outgoing_links__target_issue", "incoming_links__source_issue", "watchers"),
         pk=pk
     )
-    user = get_current_user(request)
+    user = request.user
+    if not check_project_access(issue.project, user):
+        messages.error(request, "Permission denied.")
+        return redirect("projects:list")
     
     # Handle Comment submission via POST
     if request.method == "POST" and "comment_content" in request.POST:
@@ -58,19 +67,20 @@ def issue_detail_page(request, pk):
     if request.method == "POST" and "target_issue_id" in request.POST:
         target_id = request.POST.get("target_issue_id")
         link_type = request.POST.get("link_type", "RELATES_TO")
-        target_issue = Issue.objects.filter(pk=target_id).first()
+        target_issue = Issue.objects.filter(pk=target_id, project=issue.project).first()
         if target_issue and target_issue != issue:
             IssueLink.objects.get_or_create(source_issue=issue, target_issue=target_issue, link_type=link_type)
             messages.success(request, f"Linked to {target_issue.key}.")
             return redirect("issues:detail", pk=issue.pk)
 
+    member_user_ids = issue.project.memberships.values_list("user_id", flat=True)
     context = {
         "current_user": user,
         "issue": issue,
         "is_watching": issue.watchers.filter(pk=user.pk).exists() if user else False,
         "project": issue.project,
         "all_project_issues": issue.project.issues.exclude(pk=issue.pk),
-        "users": User.objects.filter(is_active=True),
+        "users": User.objects.filter(id__in=member_user_ids, is_active=True),
         "sprints": issue.project.sprints.all(),
         "audit_logs": issue.audit_logs.select_related("actor").order_by("-created_at")[:20],
     }
@@ -78,10 +88,20 @@ def issue_detail_page(request, pk):
 
 
 # 2. Issue Create View
+@login_required
 def issue_create_view(request):
-    user = get_current_user(request)
+    user = request.user
+    user_projects = Project.objects.filter(
+        Q(owner=user) | Q(memberships__user=user),
+        is_archived=False
+    ).distinct()
+
+    if not user_projects.exists():
+        messages.info(request, "Please create a project first before creating issues.")
+        return redirect("projects:list")
+
     project_id = request.GET.get("project") or request.POST.get("project_id")
-    project = get_object_or_404(Project, pk=project_id) if project_id else Project.objects.first()
+    project = user_projects.filter(pk=project_id).first() if project_id else user_projects.first()
 
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
@@ -89,7 +109,11 @@ def issue_create_view(request):
         issue_type = request.POST.get("issue_type", "TASK")
         priority = request.POST.get("priority", "MEDIUM")
         status_val = request.POST.get("status", "TODO")
-        points = int(request.POST.get("story_points", 3))
+        try:
+            points = int(request.POST.get("story_points", 3))
+        except (ValueError, TypeError):
+            points = 3
+
         assignee_id = request.POST.get("assignee_id")
         sprint_id = request.POST.get("sprint_id")
         epic_id = request.POST.get("epic_id")
@@ -98,8 +122,8 @@ def issue_create_view(request):
 
         if title and project:
             assignee = User.objects.filter(pk=assignee_id).first() if assignee_id else None
-            sprint = Sprint.objects.filter(pk=sprint_id).first() if sprint_id else None
-            epic = Issue.objects.filter(pk=epic_id).first() if epic_id else None
+            sprint = project.sprints.filter(pk=sprint_id).first() if sprint_id else None
+            epic = project.issues.filter(pk=epic_id, issue_type="EPIC").first() if epic_id else None
 
             issue = Issue.objects.create(
                 project=project,
@@ -118,41 +142,53 @@ def issue_create_view(request):
             )
 
             IssueAuditLog.objects.create(issue=issue, actor=user, action="Created issue")
+            try:
+                from mongodb_engine.manager import mongo_manager
+                mongo_manager.sync_issue(issue)
+            except Exception:
+                pass
             messages.success(request, f"Issue {issue.key} created successfully!")
             return redirect("issues:detail", pk=issue.pk)
 
+    member_user_ids = project.memberships.values_list("user_id", flat=True) if project else []
     context = {
         "current_user": user,
         "project": project,
-        "projects": Project.objects.filter(is_archived=False),
+        "projects": user_projects,
         "sprints": project.sprints.all() if project else [],
         "epics": project.issues.filter(issue_type="EPIC") if project else [],
-        "users": User.objects.filter(is_active=True),
+        "users": User.objects.filter(id__in=member_user_ids, is_active=True),
     }
     return render(request, "issues/issue_form.html", context)
 
 
 # 3. Issue Edit & Quick Update
+@login_required
 def issue_edit_view(request, pk):
     issue = get_object_or_404(Issue, pk=pk)
-    user = get_current_user(request)
+    user = request.user
+    if not check_project_access(issue.project, user):
+        messages.error(request, "Permission denied.")
+        return redirect("projects:list")
 
     if request.method == "POST":
         old_status = issue.status
-        old_assignee = issue.assignee
 
         issue.title = request.POST.get("title", issue.title).strip()
         issue.description = request.POST.get("description", issue.description).strip()
         issue.issue_type = request.POST.get("issue_type", issue.issue_type)
         issue.priority = request.POST.get("priority", issue.priority)
         issue.status = request.POST.get("status", issue.status)
-        issue.story_points = int(request.POST.get("story_points", issue.story_points))
+        try:
+            issue.story_points = int(request.POST.get("story_points", issue.story_points))
+        except (ValueError, TypeError):
+            pass
         
         assignee_id = request.POST.get("assignee_id")
         issue.assignee = User.objects.filter(pk=assignee_id).first() if assignee_id else None
         
         sprint_id = request.POST.get("sprint_id")
-        issue.sprint = Sprint.objects.filter(pk=sprint_id).first() if sprint_id else None
+        issue.sprint = issue.project.sprints.filter(pk=sprint_id).first() if sprint_id else None
 
         due_date = request.POST.get("due_date")
         issue.due_date = due_date if due_date else None
@@ -169,6 +205,30 @@ def issue_edit_view(request, pk):
         else:
             IssueAuditLog.objects.create(issue=issue, actor=user, action="Updated ticket details")
 
+        # Recalculate sprint points if status changed
+        if old_status != issue.status and issue.sprint:
+            done_pts = sum(i.story_points for i in issue.sprint.issues.filter(status="DONE"))
+            issue.sprint.completed_points = done_pts
+            issue.sprint.save(update_fields=["completed_points"])
+            SprintHealthEngine.evaluate_sprint(issue.sprint)
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({
+                "status": "success",
+                "message": f"Issue {issue.key} updated.",
+                "issue": {
+                    "id": issue.pk,
+                    "key": issue.key,
+                    "title": issue.title,
+                    "status": issue.status,
+                    "status_display": issue.get_status_display(),
+                    "priority": issue.priority,
+                    "story_points": issue.story_points,
+                    "assignee": issue.assignee.display_name if issue.assignee else "Unassigned",
+                    "sprint": issue.sprint.name if issue.sprint else "Backlog",
+                }
+            })
+
         messages.success(request, f"Issue {issue.key} updated.")
         return redirect("issues:detail", pk=issue.pk)
 
@@ -176,13 +236,82 @@ def issue_edit_view(request, pk):
 
 
 # 4. Issue Delete View
+@login_required
 def issue_delete_view(request, pk):
     issue = get_object_or_404(Issue, pk=pk)
+    user = request.user
+    is_authorized = (
+        user.is_superuser or
+        issue.project.owner == user or
+        issue.reporter == user or
+        check_project_access(issue.project, user, required_roles=["OWNER", "ADMIN", "MANAGER", "DEVELOPER", "TESTER"])
+    )
+    if not is_authorized:
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({"status": "error", "message": "Permission denied."}, status=403)
+        messages.error(request, "Permission denied.")
+        return redirect("issues:detail", pk=issue.pk)
+
     project_id = issue.project.pk
     key = issue.key
+    sprint = issue.sprint
     issue.delete()
+
+    # Recalculate sprint points if applicable
+    if sprint:
+        sprint.completed_points = sum(
+            i.story_points for i in sprint.issues.filter(status="DONE")
+        )
+        sprint.save(update_fields=["completed_points"])
+        SprintHealthEngine.evaluate_sprint(sprint)
+
+    redirect_url = f"/projects/{project_id}/board/"
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+        return JsonResponse({
+            "status": "success",
+            "message": f"Issue {key} was deleted.",
+            "redirect_url": redirect_url
+        })
+
     messages.success(request, f"Issue {key} was deleted.")
-    return redirect("projects:detail", pk=project_id)
+    return redirect(redirect_url)
+
+
+# 4b. Subtask Delete View
+@login_required
+def subtask_delete_view(request, subtask_pk):
+    subtask = get_object_or_404(SubTask, pk=subtask_pk)
+    issue = subtask.issue
+    user = request.user
+    if not check_project_access(issue.project, user):
+        return JsonResponse({"status": "error", "message": "Permission denied."}, status=403)
+
+    subtask_title = subtask.title
+    subtask.delete()
+    IssueAuditLog.objects.create(issue=issue, actor=user, action=f"Removed subtask '{subtask_title}'")
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+        return JsonResponse({
+            "status": "success",
+            "subtasks_completed": issue.subtasks_completed,
+            "subtasks_total": issue.subtasks_total,
+            "subtasks_progress": issue.subtasks_progress,
+        })
+    messages.success(request, "Subtask removed.")
+    return redirect("issues:detail", pk=issue.pk)
+
+
+# 4c. Issue Link Delete View
+@login_required
+def issue_link_delete_view(request, link_pk):
+    link = get_object_or_404(IssueLink, pk=link_pk)
+    issue = link.source_issue
+    if not check_project_access(issue.project, request.user):
+        return JsonResponse({"status": "error", "message": "Permission denied."}, status=403)
+    link.delete()
+    messages.success(request, "Issue link removed.")
+    return redirect("issues:detail", pk=issue.pk)
 
 
 # 5. REST API Endpoints for Drag-and-Drop Kanban and SPA Modals
@@ -190,6 +319,7 @@ class IssueListCreateAPI(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        user = request.user
         project_id = request.query_params.get("project_id")
         sprint_id = request.query_params.get("sprint_id")
         status_filter = request.query_params.get("status")
@@ -197,6 +327,13 @@ class IssueListCreateAPI(APIView):
         search = request.query_params.get("search", "").strip()
 
         qs = Issue.objects.select_related("project", "sprint", "assignee", "reporter").all()
+
+        if user and user.is_authenticated:
+            user_project_ids = Project.objects.filter(
+                Q(owner=user) | Q(memberships__user=user),
+                is_archived=False
+            ).values_list("id", flat=True)
+            qs = qs.filter(project_id__in=user_project_ids)
 
         if project_id:
             qs = qs.filter(project_id=project_id)
@@ -240,24 +377,29 @@ class IssueListCreateAPI(APIView):
         return Response(data)
 
     def post(self, request):
-        user = get_current_user(request)
+        user = request.user if request.user.is_authenticated else None
         project_id = request.data.get("project_id")
         
+        user_projects = Project.objects.filter(
+            Q(owner=user) | Q(memberships__user=user),
+            is_archived=False
+        ).distinct() if user else Project.objects.filter(is_archived=False)
+
         project = None
         if project_id:
             try:
-                project = Project.objects.filter(pk=int(project_id)).first()
+                project = user_projects.filter(pk=int(project_id)).first()
             except (ValueError, TypeError):
                 project = None
         if not project:
-            project = Project.objects.filter(is_archived=False).first()
+            project = user_projects.first()
 
         title = request.data.get("title", "").strip()
 
         if not title:
             return Response({"error": "Issue title is required."}, status=status.HTTP_400_BAD_REQUEST)
         if not project:
-            return Response({"error": "No project exists. Please create a project first."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No accessible project exists. Please create a project first."}, status=status.HTTP_400_BAD_REQUEST)
 
         sprint_id = request.data.get("sprint_id")
         assignee_id = request.data.get("assignee_id")
@@ -272,7 +414,7 @@ class IssueListCreateAPI(APIView):
         sprint = None
         if sprint_id:
             try:
-                sprint = Sprint.objects.filter(pk=int(sprint_id)).first()
+                sprint = project.sprints.filter(pk=int(sprint_id)).first()
             except (ValueError, TypeError):
                 sprint = None
 
@@ -283,7 +425,7 @@ class IssueListCreateAPI(APIView):
         except (ValueError, TypeError):
             story_points = 3
 
-        # Safe Date parsing for YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, etc.
+        # Safe Date parsing
         raw_date = request.data.get("due_date")
         parsed_due_date = None
         if raw_date and str(raw_date).strip():
@@ -334,27 +476,33 @@ class IssueListCreateAPI(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class IssueMoveStatusAPI(APIView):
     """
     Drag and drop status movement API.
     """
+    authentication_classes = (CsrfExemptSessionAuthentication,)
     permission_classes = [AllowAny]
 
     def post(self, request, pk):
         issue = get_object_or_404(Issue, pk=pk)
-        user = get_current_user(request)
+        user = request.user if request.user.is_authenticated else None
         new_status = request.data.get("status")
         target_sprint_id = request.data.get("sprint_id")
         old_status = issue.status
 
-        if new_status and new_status in dict(Issue.STATUS_CHOICES):
-            issue.status = new_status
+        if new_status:
+            normalized_status = str(new_status).strip().upper().replace("-", "_").replace(" ", "_")
+            if normalized_status in dict(Issue.STATUS_CHOICES):
+                issue.status = normalized_status
+            elif new_status in dict(Issue.STATUS_CHOICES):
+                issue.status = new_status
 
         if target_sprint_id is not None:
             if target_sprint_id in ["backlog", "", 0]:
                 issue.sprint = None
             else:
-                issue.sprint = Sprint.objects.filter(pk=target_sprint_id).first()
+                issue.sprint = issue.project.sprints.filter(pk=target_sprint_id).first()
 
         issue.save()
 
@@ -374,6 +522,10 @@ class IssueMoveStatusAPI(APIView):
                 pass
 
         if issue.sprint:
+            # Synchronize completed points and recalculate sprint health
+            done_pts = sum(i.story_points for i in issue.sprint.issues.filter(status="DONE"))
+            issue.sprint.completed_points = done_pts
+            issue.sprint.save(update_fields=["completed_points"])
             SprintHealthEngine.evaluate_sprint(issue.sprint)
 
         return Response({
@@ -387,7 +539,9 @@ class IssueMoveStatusAPI(APIView):
         })
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class SubtaskToggleAPI(APIView):
+    authentication_classes = (CsrfExemptSessionAuthentication,)
     permission_classes = [AllowAny]
 
     def post(self, request, subtask_pk):
@@ -397,12 +551,14 @@ class SubtaskToggleAPI(APIView):
         return Response({"subtask_id": subtask.pk, "is_completed": subtask.is_completed})
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class WatcherToggleAPI(APIView):
+    authentication_classes = (CsrfExemptSessionAuthentication,)
     permission_classes = [AllowAny]
 
     def post(self, request, pk):
         issue = get_object_or_404(Issue, pk=pk)
-        user = get_current_user(request)
+        user = request.user if request.user.is_authenticated else None
         if not user:
             return Response({"error": "User not authenticated"}, status=401)
         

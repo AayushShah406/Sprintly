@@ -13,5 +13,6 @@ urlpatterns = [
     path("reset-password/<str:token>/", views.reset_password_view, name="reset_password"),
     path("profile/", views.profile_view, name="profile"),
     path("settings/", views.settings_view, name="settings"),
+    path("api/profile/", views.ProfileDetailAPI.as_view(), name="api_profile"),
     path("api/users/", views.UserDirectoryAPI.as_view(), name="api_users"),
 ]

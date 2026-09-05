@@ -9,7 +9,7 @@ from accounts.models import User
 from projects.models import Project, ProjectMember
 from sprints.models import Sprint
 from issues.models import Issue, SubTask, Comment, IssueAttachment, IssueLink, IssueAuditLog
-from notifications.models import Notification, TeamRoom, ChatMessage
+from notifications.models import Notification
 from mongodb_engine.manager import mongo_manager
 from django.conf import settings
 
@@ -25,8 +25,6 @@ def wipe_all_data_to_zero():
     Issue.objects.all().delete()
     Sprint.objects.all().delete()
     Notification.objects.all().delete()
-    ChatMessage.objects.all().delete()
-    TeamRoom.objects.all().delete()
     ProjectMember.objects.all().delete()
     Project.objects.all().delete()
 

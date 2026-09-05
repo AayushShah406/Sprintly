@@ -1,58 +1,222 @@
 {% extends "base.html" %}
 
-{% block title %}Notifications Inbox | Sprintly{% endblock %}
+{% block title %}Notifications Inbox | Sprintly Enterprise{% endblock %}
+{% block extra_css %}
+<style>
+  .notif-filter-pill {
+    font-size: 0.82rem;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+  }
+  .notif-filter-pill.active {
+    background: var(--accent-primary) !important;
+    color: #fff !important;
+    border-color: var(--accent-primary) !important;
+  }
+  .notif-card-invitation {
+    border-left: 4px solid #4f46e5;
+  }
+  .notif-card-invitation.unread {
+    background: rgba(79, 70, 229, 0.04);
+  }
+  .notif-card-standard {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .notif-card-standard.unread {
+    background: rgba(79, 70, 229, 0.04);
+    border-left: 3px solid var(--accent-primary);
+  }
+  .notif-badge-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8rem;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .notif-badge-ASSIGNMENT { background: #0284c7; }
+  .notif-badge-STATUS_CHANGE { background: #10b981; }
+  .notif-badge-SYSTEM, .notif-badge-COMMENT, .notif-badge-MENTION, .notif-badge-DEFAULT { background: #6366f1; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="dashboard-page-container" style="max-width:850px;margin:0 auto;">
+<div class="dashboard-page-container" style="max-width:920px;margin:0 auto;">
   
-  <div class="view-header">
-    <div class="view-title-group">
-      <h1>
-        <i data-lucide="bell" style="width:26px;height:26px;color:#4f46e5;"></i>
+  <div class="dashboard-hero-section">
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;color:var(--accent-primary);margin-bottom:10px;">
+        <i data-lucide="bell" style="width:14px;height:14px;"></i>
+        <span>Notifications Center</span>
+        <span style="opacity:0.4;">•</span>
+        <span style="color:var(--text-secondary);font-weight:600;">{{ unread_count }} Unread</span>
+      </div>
+      <h1 class="hero-greeting">
         <span>Notifications Inbox</span>
       </h1>
-      <div class="view-subtitle">Stay updated on ticket assignments, status transitions, and sprint activity.</div>
+      <p class="hero-subtitle">Team invitations, ticket assignments, status updates, and workspace alerts.</p>
     </div>
 
-    <form method="POST">
-      {% csrf_token %}
-      <input type="hidden" name="mark_all_read" value="1">
-      <button type="submit" class="btn-secondary">
-        <i data-lucide="check-check" style="width:16px;height:16px;"></i> Mark All as Read
-      </button>
-    </form>
+    <div class="quick-actions-bar">
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="mark_all_read" value="1">
+        <button type="submit" class="btn-secondary">
+          <i data-lucide="check-check" style="width:16px;height:16px;"></i>
+          <span>Mark All Read</span>
+        </button>
+      </form>
+    </div>
   </div>
 
-  <div class="dash-card" style="margin-top:20px;">
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      {% for notif in notifications %}
-        <div class="task-row-item" style="{% if not notif.is_read %}background:rgba(79, 70, 229, 0.04);border-left:3px solid #4f46e5;{% endif %}">
-          <div style="display:flex;align-items:flex-start;gap:12px;">
-            <div class="avatar-circle" style="background:#4f46e5;width:32px;height:32px;font-size:0.75rem;margin-top:2px;">
-              <i data-lucide="info" style="width:16px;height:16px;"></i>
+  <!-- Notification Filter Tabs -->
+  <div style="display:flex;align-items:center;gap:8px;margin:20px 0;flex-wrap:wrap;">
+    <a href="{% url 'notifications:inbox' %}" class="btn-secondary notif-filter-pill {% if not filter_type %}active{% endif %}">
+      All ({{ notifications|length }})
+    </a>
+    <a href="{% url 'notifications:inbox' %}?type=PROJECT_INVITATION" class="btn-secondary notif-filter-pill {% if filter_type == 'PROJECT_INVITATION' %}active{% endif %}">
+      <i data-lucide="mail" style="width:14px;height:14px;"></i>
+      <span>Team Invitations</span>
+    </a>
+    <a href="{% url 'notifications:inbox' %}?type=ASSIGNMENT" class="btn-secondary notif-filter-pill {% if filter_type == 'ASSIGNMENT' %}active{% endif %}">
+      <i data-lucide="user-check" style="width:14px;height:14px;"></i>
+      <span>Assignments</span>
+    </a>
+    <a href="{% url 'notifications:inbox' %}?type=STATUS_CHANGE" class="btn-secondary notif-filter-pill {% if filter_type == 'STATUS_CHANGE' %}active{% endif %}">
+      <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
+      <span>Status Changes</span>
+    </a>
+    <a href="{% url 'notifications:inbox' %}?type=SYSTEM" class="btn-secondary notif-filter-pill {% if filter_type == 'SYSTEM' %}active{% endif %}">
+      <i data-lucide="info" style="width:14px;height:14px;"></i>
+      <span>System</span>
+    </a>
+  </div>
+
+  <!-- Notification Feed Cards -->
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    {% for notif in notifications %}
+      
+      {% if notif.notification_type == 'PROJECT_INVITATION' %}
+        <!-- Rich Team Invitation Notification Card -->
+        <div class="dash-card notif-card-invitation {% if not notif.is_read %}unread{% endif %}">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+            
+            <div style="display:flex;align-items:flex-start;gap:14px;min-width:0;flex:1;">
+              <div class="avatar-circle" style="background:linear-gradient(135deg, #4f46e5, #7c3aed);width:44px;height:44px;font-size:1rem;font-weight:900;border-radius:12px;box-shadow:0 4px 12px rgba(79,70,229,0.3);flex-shrink:0;">
+                <i data-lucide="user-plus" style="width:20px;height:20px;"></i>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+                  <span style="font-size:0.75rem;font-weight:800;text-transform:uppercase;color:#4f46e5;background:rgba(79,70,229,0.12);padding:2px 8px;border-radius:4px;">
+                    WORKSPACE INVITATION
+                  </span>
+                  {% if not notif.is_read %}
+                    <span style="width:8px;height:8px;border-radius:50%;background:#4f46e5;"></span>
+                  {% endif %}
+                  <span style="font-size:0.75rem;color:var(--text-muted);">{{ notif.created_at|timesince }} ago</span>
+                </div>
+                
+                <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin-bottom:6px;">{{ notif.title }}</h3>
+                <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.5;margin-bottom:12px;">{{ notif.message }}</p>
+
+                <!-- Project Quick Context -->
+                {% if notif.project %}
+                  <div style="display:inline-flex;align-items:center;gap:10px;padding:6px 12px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:14px;">
+                    <div class="avatar-circle" style="background:{{ notif.project.avatar_color|default:'#4f46e5' }};width:24px;height:24px;font-size:0.7rem;font-weight:800;border-radius:4px;">
+                      {{ notif.project.key }}
+                    </div>
+                    <span style="font-size:0.85rem;font-weight:700;color:var(--text-primary);">{{ notif.project.name }}</span>
+                    <span style="font-size:0.75rem;color:var(--text-muted);">• Role: <strong>{{ notif.invitation_role|default:'Developer' }}</strong></span>
+                  </div>
+                {% endif %}
+
+                <!-- Action Button Controls -->
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  {% if notif.invitation_status == 'PENDING' %}
+                    <a href="{% url 'notifications:accept_invitation' notif.id %}" class="btn-primary" style="padding:7px 16px;font-size:0.85rem;">
+                      <i data-lucide="check" style="width:14px;height:14px;"></i>
+                      <span>Accept Invitation & Join</span>
+                    </a>
+                    <a href="{% url 'notifications:decline_invitation' notif.id %}" class="btn-secondary" style="padding:7px 14px;font-size:0.85rem;color:var(--text-muted);">
+                      <i data-lucide="x" style="width:14px;height:14px;"></i>
+                      <span>Decline</span>
+                    </a>
+                  {% elif notif.invitation_status == 'ACCEPTED' %}
+                    <span style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:700;color:#10b981;background:rgba(16,185,129,0.1);padding:4px 10px;border-radius:var(--radius-full);">
+                      <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
+                      <span>Invitation Accepted</span>
+                    </span>
+                    {% if notif.project %}
+                      <a href="{% url 'projects:detail' notif.project.id %}" class="btn-secondary" style="font-size:0.82rem;padding:5px 12px;">
+                        <span>Open Workspace →</span>
+                      </a>
+                    {% endif %}
+                  {% elif notif.invitation_status == 'DECLINED' %}
+                    <span style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:700;color:var(--text-muted);background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:var(--radius-full);">
+                      <i data-lucide="x-circle" style="width:14px;height:14px;"></i>
+                      <span>Invitation Declined</span>
+                    </span>
+                  {% endif %}
+                </div>
+
+              </div>
             </div>
+
+            <a href="{% url 'notifications:delete' notif.id %}" class="btn-icon" style="color:var(--text-muted);" title="Dismiss">
+              <i data-lucide="x" style="width:16px;height:16px;"></i>
+            </a>
+
+          </div>
+        </div>
+
+      {% else %}
+        <!-- Standard Notification Item Card -->
+        <div class="dash-card notif-card-standard {% if not notif.is_read %}unread{% endif %}">
+          <div style="display:flex;align-items:flex-start;gap:14px;min-width:0;">
+            <div class="avatar-circle notif-badge-icon notif-badge-{{ notif.notification_type|default:'DEFAULT' }}">
+              {% if notif.notification_type == 'ASSIGNMENT' %}
+                <i data-lucide="check-square" style="width:18px;height:18px;"></i>
+              {% elif notif.notification_type == 'STATUS_CHANGE' %}
+                <i data-lucide="refresh-cw" style="width:18px;height:18px;"></i>
+              {% else %}
+                <i data-lucide="info" style="width:18px;height:18px;"></i>
+              {% endif %}
+            </div>
+            
             <div>
-              <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);">{{ notif.title }}</div>
-              <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px;line-height:1.4;">{{ notif.message }}</div>
-              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">{{ notif.created_at|timesince }} ago</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-weight:800;font-size:0.95rem;color:var(--text-primary);">{{ notif.title }}</span>
+                <span style="font-size:0.75rem;color:var(--text-muted);">{{ notif.created_at|timesince }} ago</span>
+              </div>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin:3px 0 0;line-height:1.4;">{{ notif.message }}</p>
             </div>
           </div>
 
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             {% if notif.link %}
-              <a href="{% url 'notifications:mark_read' notif.id %}" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;">View →</a>
+              <a href="{% url 'notifications:mark_read' notif.id %}" class="btn-secondary" style="font-size:0.8rem;padding:5px 12px;">
+                <span>View</span> <i data-lucide="arrow-right" style="width:12px;height:12px;"></i>
+              </a>
             {% endif %}
-            <a href="{% url 'notifications:delete' notif.id %}" class="btn-icon" style="color:var(--text-muted);" title="Dismiss"><i data-lucide="x" style="width:14px;height:14px;"></i></a>
+            <a href="{% url 'notifications:delete' notif.id %}" class="btn-icon" style="color:var(--text-muted);" title="Dismiss">
+              <i data-lucide="x" style="width:14px;height:14px;"></i>
+            </a>
           </div>
         </div>
-      {% empty %}
-        <div style="padding:32px;text-align:center;color:var(--text-muted);">
-          <i data-lucide="inbox" style="width:48px;height:48px;margin-bottom:10px;opacity:0.5;"></i>
-          <div style="font-weight:700;color:var(--text-primary);">No notifications</div>
-          <div style="font-size:0.85rem;margin-top:4px;">You are all caught up!</div>
+      {% endif %}
+
+    {% empty %}
+      <div class="empty-state-box" style="padding:48px 24px;">
+        <div style="width:52px;height:52px;border-radius:50%;background:rgba(99,102,241,0.12);display:inline-flex;align-items:center;justify-content:center;color:var(--accent-primary);margin-bottom:12px;">
+          <i data-lucide="inbox" style="width:26px;height:26px;"></i>
         </div>
-      {% endfor %}
-    </div>
+        <h3 style="font-weight:800;color:var(--text-primary);font-size:1.15rem;">No notifications</h3>
+        <p style="font-size:0.88rem;color:var(--text-secondary);margin:4px 0 0;">You are all caught up! When teammates invite you or update tickets, notifications appear here.</p>
+      </div>
+    {% endfor %}
   </div>
 
 </div>

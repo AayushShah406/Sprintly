@@ -2,6 +2,8 @@ import json
 from datetime import date, timedelta
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.models import Q, Count, Sum
 from django.http import JsonResponse, HttpResponseForbidden
 from rest_framework.views import APIView
@@ -14,34 +16,32 @@ from accounts.models import User
 from analytics.health_service import SprintHealthEngine
 from mongodb_engine.manager import mongo_manager
 
-def get_current_user(request):
-    if request.user.is_authenticated:
-        return request.user
-    return User.objects.first()
-
 def check_project_access(project, user, required_roles=None):
-    """Verifies that user is a member of the project. Auto-enrolls if in workspace."""
-    if not user or not project:
-        return True
+    """Verifies that user is an authorized member or owner of the project."""
+    if not user or not user.is_authenticated or not project:
+        return False
     if user.is_superuser or project.owner == user:
         return True
     membership = project.memberships.filter(user=user).first()
     if not membership:
-        ProjectMember.objects.create(project=project, user=user, role="DEVELOPER")
-        return True
+        return False
     if required_roles:
         return membership.role in required_roles
     return True
 
 # 1. Projects Directory List
+@login_required
 def project_list_view(request):
-    user = get_current_user(request)
+    user = request.user
     search = request.GET.get("search", "").strip()
     status_filter = request.GET.get("status", "")
     owner_filter = request.GET.get("owner", "")
     sort_by = request.GET.get("sort", "-created_at")
 
-    qs = Project.objects.filter(is_archived=False).prefetch_related("memberships__user", "issues", "sprints")
+    qs = Project.objects.filter(
+        Q(owner=user) | Q(memberships__user=user),
+        is_archived=False
+    ).distinct().prefetch_related("memberships__user", "issues", "sprints")
 
     if search:
         qs = qs.filter(Q(name__icontains=search) | Q(key__icontains=search) | Q(description__icontains=search))
@@ -73,9 +73,11 @@ def project_list_view(request):
                     owner=user,
                     lead=user,
                 )
-                if user:
-                    ProjectMember.objects.create(project=project, user=user, role="OWNER")
-                mongo_manager.sync_project(project)
+                ProjectMember.objects.create(project=project, user=user, role="OWNER")
+                try:
+                    mongo_manager.sync_project(project)
+                except Exception:
+                    pass
                 messages.success(request, f"Project '{project.name}' created successfully!")
                 return redirect("projects:detail", pk=project.pk)
 
@@ -86,26 +88,21 @@ def project_list_view(request):
         "status_filter": status_filter,
         "owner_filter": owner_filter,
         "sort_by": sort_by,
-        "owners": User.objects.filter(is_active=True),
+        "owners": User.objects.filter(id__in=qs.values_list("owner_id", flat=True), is_active=True),
     }
     return render(request, "projects/project_list.html", context)
 
 
 # 2. Project Hub & Sub-Tabs
+@login_required
+@ensure_csrf_cookie
 def project_detail_hub(request, pk, tab="overview"):
-    user = get_current_user(request)
-    project = Project.objects.filter(pk=pk).first()
+    user = request.user
+    project = Project.objects.filter(pk=pk, is_archived=False).first()
     
-    # Graceful fallback if requested project ID is invalid or does not exist
-    if not project:
-        fallback = Project.objects.filter(is_archived=False).first()
-        if fallback:
-            return redirect(f"/projects/{fallback.pk}/{tab}/")
-        else:
-            messages.info(request, "No projects currently exist. Please create your first project.")
-            return redirect("projects:list")
-
-    check_project_access(project, user)
+    if not project or not check_project_access(project, user):
+        messages.error(request, "Project does not exist or you do not have permission to view it.")
+        return redirect("projects:list")
 
     today = date.today()
     all_issues = project.issues.select_related("assignee", "reporter", "sprint", "epic").all()
@@ -179,16 +176,25 @@ def project_detail_hub(request, pk, tab="overview"):
                 except Exception:
                     pass
 
-            pm, _ = ProjectMember.objects.get_or_create(project=project, user=teammate)
-            pm.role = role
-            pm.capacity_hours_per_week = capacity
-            pm.save()
-            
-            # Send appealing invitation email
-            from accounts.email_service import send_invitation_email
-            send_invitation_email(user, teammate, project, pm.get_role_display())
+            from notifications.models import Notification
+            # Create interactive invitation notification
+            Notification.objects.create(
+                recipient=teammate,
+                actor=user,
+                project=project,
+                notification_type="PROJECT_INVITATION",
+                title=f"Invitation to join {project.name}",
+                message=f"{user.display_name} invited you to join the '{project.name}' workspace as {role.capitalize()}.",
+                invitation_role=role,
+                invitation_status="PENDING",
+                link=f"/projects/{project.id}/"
+            )
 
-            messages.success(request, f"Teammate {teammate.display_name} ({teammate.email}) added to {project.name}!")
+            # Send invitation email
+            from accounts.email_service import send_invitation_email
+            send_invitation_email(user, teammate, project, role.capitalize())
+
+            messages.success(request, f"Invitation sent to {teammate.display_name} ({teammate.email}) for workspace {project.name}!")
             return redirect("projects:team", pk=project.pk)
 
     # Handle Create Sprint
@@ -289,6 +295,11 @@ def project_detail_hub(request, pk, tab="overview"):
             return redirect("projects:team", pk=project.pk)
 
     # Tab specific context
+    user_projects = Project.objects.filter(
+        Q(owner=user) | Q(memberships__user=user),
+        is_archived=False
+    ).distinct()
+
     tab_context = {
         "current_user": user,
         "project": project,
@@ -303,7 +314,7 @@ def project_detail_hub(request, pk, tab="overview"):
         "open_issues": total_issues - done_issues,
         "progress_pct": progress_pct,
         "health_data": health_data,
-        "all_projects": Project.objects.filter(is_archived=False),
+        "all_projects": user_projects,
     }
 
     # Tab: Board (Kanban)
@@ -494,22 +505,35 @@ class ProjectGanttDataAPI(APIView):
     """Real-Time Gantt Chart API endpoint for live asynchronous updates."""
     def get(self, request, pk):
         project = get_object_or_404(Project, pk=pk)
+        if not check_project_access(project, request.user):
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
         data = build_gantt_data(project)
         return Response(data, status=status.HTTP_200_OK)
 
 
+@login_required
 def project_archive_view(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    if not check_project_access(project, request.user, required_roles=["OWNER", "ADMIN", "MANAGER"]):
+        messages.error(request, "Permission denied.")
+        return redirect("projects:list")
     project.is_archived = True
     project.status = "ARCHIVED"
     project.save()
-    mongo_manager.sync_project(project)
+    try:
+        mongo_manager.sync_project(project)
+    except Exception:
+        pass
     messages.success(request, f"Project '{project.name}' has been archived.")
     return redirect("projects:list")
 
 
+@login_required
 def project_delete_view(request, pk):
     project = get_object_or_404(Project, pk=pk)
+    if not check_project_access(project, request.user, required_roles=["OWNER", "ADMIN"]):
+        messages.error(request, "Permission denied.")
+        return redirect("projects:list")
     if request.method == "POST":
         name = project.name
         project.delete()

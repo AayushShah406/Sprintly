@@ -84,6 +84,15 @@ class Issue(models.Model):
             else:
                 self.key = f"{self.project.key}-1"
         super().save(*args, **kwargs)
+        if self.sprint_id:
+            try:
+                done_pts = sum(i.story_points for i in self.sprint.issues.filter(status="DONE"))
+                if self.sprint.completed_points != done_pts:
+                    self.sprint.completed_points = done_pts
+                    self.sprint.save(update_fields=["completed_points"])
+            except Exception:
+                pass
+
 
     @property
     def label_list(self):

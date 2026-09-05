@@ -37,6 +37,20 @@ class User(AbstractUser):
             return self.username[:2].upper()
         return f"{first}{last}"
 
+    @property
+    def get_profile(self):
+        try:
+            profile = self.profile
+        except Exception:
+            profile, _ = Profile.objects.get_or_create(
+                user=self,
+                defaults={
+                    "job_title": self.title or "Software Engineer",
+                    "department": "Engineering",
+                }
+            )
+        return profile
+
     def __str__(self):
         return f"{self.display_name} ({self.get_role_display()})"
 
@@ -98,3 +112,48 @@ class RefreshToken(models.Model):
 
     def __str__(self):
         return f"Token for {self.user.username}"
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
+    job_title = models.CharField(max_length=120, blank=True, default="")
+    location = models.CharField(max_length=120, blank=True, default="")
+    bio = models.TextField(max_length=1000, blank=True, default="")
+    profile_picture = models.ImageField(upload_to="profile_pics/", null=True, blank=True)
+    department = models.CharField(max_length=100, blank=True, default="Engineering")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Profile of {self.user.username}"
+
+    @property
+    def profile_picture_url(self):
+        if self.profile_picture and hasattr(self.profile_picture, "url"):
+            try:
+                return self.profile_picture.url
+            except Exception:
+                return None
+        return None
+
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def create_or_sync_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.get_or_create(
+            user=instance,
+            defaults={
+                "job_title": instance.title or "Software Engineer",
+                "department": "Engineering",
+            }
+        )

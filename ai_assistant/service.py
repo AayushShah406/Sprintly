@@ -562,6 +562,12 @@ class SprintlyAIEngine:
             else:
                 response_text = f"Sprintly AI is actively tracking your workspace (**{len(all_projects)} project(s)**, **{all_issues.count()} issue(s)**). How can I assist you today?"
 
+        return {
+            "success": True,
+            "answer": response_text,
+            "context": context_data,
+        }
+
     # =========================================================================
     # 10. AI SMART WORK ALLOCATION ENGINE
     # =========================================================================

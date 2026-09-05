@@ -1,6 +1,24 @@
 {% extends "base.html" %}
 
 {% block title %}User Settings | Sprintly{% endblock %}
+{% block extra_css %}
+<style>
+  .theme-radio-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border: 2px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .theme-radio-card.active {
+    border-color: var(--accent-primary);
+    background: rgba(79, 70, 229, 0.05);
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="dashboard-page-container" style="max-width:750px;margin:0 auto;">
@@ -22,7 +40,7 @@
       <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin-bottom:14px;">Appearance Theme</h3>
       
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
-        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid {% if current_user.theme_preference == 'light' %}var(--accent-primary){% else %}var(--border-subtle){% endif %};border-radius:var(--radius-md);cursor:pointer;">
+        <label class="theme-radio-card {% if current_user.theme_preference == 'light' %}active{% endif %}">
           <input type="radio" name="theme_preference" value="light" {% if current_user.theme_preference == 'light' %}checked{% endif %}>
           <div>
             <div style="font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
@@ -33,7 +51,7 @@
           </div>
         </label>
 
-        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid {% if current_user.theme_preference == 'dark' %}var(--accent-primary){% else %}var(--border-subtle){% endif %};border-radius:var(--radius-md);cursor:pointer;">
+        <label class="theme-radio-card {% if current_user.theme_preference == 'dark' %}active{% endif %}">
           <input type="radio" name="theme_preference" value="dark" {% if current_user.theme_preference == 'dark' %}checked{% endif %}>
           <div>
             <div style="font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:6px;">

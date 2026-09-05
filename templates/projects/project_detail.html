@@ -167,6 +167,12 @@
         </div>
 
         <div class="filter-toolbar">
+          {% if active_sprint %}
+            <button type="button" class="btn-secondary" style="color:#10b981;border-color:rgba(16,185,129,0.35);font-size:0.8rem;padding:6px 14px;font-weight:700;display:inline-flex;align-items:center;gap:6px;" onclick="SprintlyApp.openCompleteSprintModal({{ active_sprint.id }}, '{{ active_sprint.name|escapejs }}')">
+              <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Complete {{ active_sprint.name }}
+            </button>
+          {% endif %}
+
           <select id="filterType" class="filter-select" onchange="SprintlyApp.filterBoard()">
             <option value="">All Types</option>
             <option value="STORY">Stories</option>
@@ -189,14 +195,34 @@
       </div>
 
       <!-- 6 Columns Kanban Grid -->
-      <div class="kanban-board" style="grid-template-columns:repeat(6, 1fr);">
+      <div class="kanban-board" data-project-id="{{ project.id }}">
+        
         <!-- Column 1: Backlog -->
         <div class="kanban-column" data-status="BACKLOG">
           <div class="column-header">
             <div class="col-title-group"><span class="col-dot dot-backlog"></span><span>BACKLOG</span></div>
             <span id="count-backlog" class="col-count">0</span>
           </div>
-          <div id="column-cards-backlog" class="column-cards"></div>
+          <div id="column-cards-backlog" class="column-cards">
+            {% for issue in all_issues %}
+              {% if issue.status == 'BACKLOG' %}
+                <div class="kanban-card" draggable="true" data-id="{{ issue.id }}" data-status="{{ issue.status }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                    <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                  </div>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;font-size:0.9rem;color:var(--text-primary);text-decoration:none;display:block;margin-bottom:8px;line-height:1.4;">
+                    <span style="color:var(--text-muted);font-size:0.8rem;margin-right:4px;">{{ issue.key }}</span>
+                    {{ issue.title }}
+                  </a>
+                  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:8px;font-size:0.75rem;">
+                    <span class="badge-points">{{ issue.story_points }} pts</span>
+                    <span style="color:var(--text-muted);">{{ issue.assignee.display_name|default:'Unassigned' }}</span>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
         </div>
 
         <!-- Column 2: To Do -->
@@ -205,7 +231,26 @@
             <div class="col-title-group"><span class="col-dot dot-todo"></span><span>TO DO</span></div>
             <span id="count-todo" class="col-count">0</span>
           </div>
-          <div id="column-cards-todo" class="column-cards"></div>
+          <div id="column-cards-todo" class="column-cards">
+            {% for issue in all_issues %}
+              {% if issue.status == 'TODO' %}
+                <div class="kanban-card" draggable="true" data-id="{{ issue.id }}" data-status="{{ issue.status }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                    <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                  </div>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;font-size:0.9rem;color:var(--text-primary);text-decoration:none;display:block;margin-bottom:8px;line-height:1.4;">
+                    <span style="color:var(--text-muted);font-size:0.8rem;margin-right:4px;">{{ issue.key }}</span>
+                    {{ issue.title }}
+                  </a>
+                  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:8px;font-size:0.75rem;">
+                    <span class="badge-points">{{ issue.story_points }} pts</span>
+                    <span style="color:var(--text-muted);">{{ issue.assignee.display_name|default:'Unassigned' }}</span>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
         </div>
 
         <!-- Column 3: In Progress -->
@@ -214,7 +259,26 @@
             <div class="col-title-group"><span class="col-dot dot-inprogress"></span><span>IN PROGRESS</span></div>
             <span id="count-in_progress" class="col-count">0</span>
           </div>
-          <div id="column-cards-in_progress" class="column-cards"></div>
+          <div id="column-cards-in_progress" class="column-cards">
+            {% for issue in all_issues %}
+              {% if issue.status == 'IN_PROGRESS' %}
+                <div class="kanban-card" draggable="true" data-id="{{ issue.id }}" data-status="{{ issue.status }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                    <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                  </div>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;font-size:0.9rem;color:var(--text-primary);text-decoration:none;display:block;margin-bottom:8px;line-height:1.4;">
+                    <span style="color:var(--text-muted);font-size:0.8rem;margin-right:4px;">{{ issue.key }}</span>
+                    {{ issue.title }}
+                  </a>
+                  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:8px;font-size:0.75rem;">
+                    <span class="badge-points">{{ issue.story_points }} pts</span>
+                    <span style="color:var(--text-muted);">{{ issue.assignee.display_name|default:'Unassigned' }}</span>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
         </div>
 
         <!-- Column 4: In Review -->
@@ -223,16 +287,54 @@
             <div class="col-title-group"><span class="col-dot dot-inreview"></span><span>IN REVIEW</span></div>
             <span id="count-in_review" class="col-count">0</span>
           </div>
-          <div id="column-cards-in_review" class="column-cards"></div>
+          <div id="column-cards-in_review" class="column-cards">
+            {% for issue in all_issues %}
+              {% if issue.status == 'IN_REVIEW' %}
+                <div class="kanban-card" draggable="true" data-id="{{ issue.id }}" data-status="{{ issue.status }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                    <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                  </div>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;font-size:0.9rem;color:var(--text-primary);text-decoration:none;display:block;margin-bottom:8px;line-height:1.4;">
+                    <span style="color:var(--text-muted);font-size:0.8rem;margin-right:4px;">{{ issue.key }}</span>
+                    {{ issue.title }}
+                  </a>
+                  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:8px;font-size:0.75rem;">
+                    <span class="badge-points">{{ issue.story_points }} pts</span>
+                    <span style="color:var(--text-muted);">{{ issue.assignee.display_name|default:'Unassigned' }}</span>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
         </div>
 
         <!-- Column 5: Blocked -->
         <div class="kanban-column" data-status="BLOCKED">
           <div class="column-header">
-            <div class="col-title-group"><span class="col-dot" style="background:#dc2626;"></span><span>BLOCKED</span></div>
+            <div class="col-title-group"><span class="col-dot dot-blocked"></span><span>BLOCKED</span></div>
             <span id="count-blocked" class="col-count">0</span>
           </div>
-          <div id="column-cards-blocked" class="column-cards"></div>
+          <div id="column-cards-blocked" class="column-cards">
+            {% for issue in all_issues %}
+              {% if issue.status == 'BLOCKED' %}
+                <div class="kanban-card" draggable="true" data-id="{{ issue.id }}" data-status="{{ issue.status }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                    <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                  </div>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;font-size:0.9rem;color:var(--text-primary);text-decoration:none;display:block;margin-bottom:8px;line-height:1.4;">
+                    <span style="color:var(--text-muted);font-size:0.8rem;margin-right:4px;">{{ issue.key }}</span>
+                    {{ issue.title }}
+                  </a>
+                  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:8px;font-size:0.75rem;">
+                    <span class="badge-points">{{ issue.story_points }} pts</span>
+                    <span style="color:var(--text-muted);">{{ issue.assignee.display_name|default:'Unassigned' }}</span>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
         </div>
 
         <!-- Column 6: Done -->
@@ -241,8 +343,28 @@
             <div class="col-title-group"><span class="col-dot dot-done"></span><span>DONE</span></div>
             <span id="count-done" class="col-count">0</span>
           </div>
-          <div id="column-cards-done" class="column-cards"></div>
+          <div id="column-cards-done" class="column-cards">
+            {% for issue in all_issues %}
+              {% if issue.status == 'DONE' %}
+                <div class="kanban-card" draggable="true" data-id="{{ issue.id }}" data-status="{{ issue.status }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+                    <span class="badge-priority priority-{{ issue.priority }}">{{ issue.priority }}</span>
+                  </div>
+                  <a href="{% url 'issues:detail' issue.id %}" style="font-weight:700;font-size:0.9rem;color:var(--text-primary);text-decoration:none;display:block;margin-bottom:8px;line-height:1.4;">
+                    <span style="color:var(--text-muted);font-size:0.8rem;margin-right:4px;">{{ issue.key }}</span>
+                    {{ issue.title }}
+                  </a>
+                  <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:8px;font-size:0.75rem;">
+                    <span class="badge-points">{{ issue.story_points }} pts</span>
+                    <span style="color:var(--text-muted);">{{ issue.assignee.display_name|default:'Unassigned' }}</span>
+                  </div>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
         </div>
+
       </div>
     </div>
   {% endif %}
@@ -506,12 +628,9 @@
                     </button>
                   </form>
                 {% elif s.status == 'ACTIVE' %}
-                  <form method="POST" action="{% url 'sprints:complete' s.id %}" style="display:inline;" onsubmit="return confirm('Complete sprint and rollover incomplete tasks?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-secondary" style="font-size:0.8rem;padding:4px 12px;color:#10b981;border-color:#a7f3d0;">
-                      <i data-lucide="check" style="width:12px;height:12px;"></i> Complete Sprint
-                    </button>
-                  </form>
+                  <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:4px 12px;color:#10b981;border-color:rgba(16,185,129,0.35);font-weight:700;display:inline-flex;align-items:center;gap:6px;" onclick="SprintlyApp.openCompleteSprintModal({{ s.id }}, '{{ s.name|escapejs }}')">
+                    <i data-lucide="check-circle" style="width:13px;height:13px;"></i> Complete Sprint
+                  </button>
                 {% endif %}
                 <a href="{% url 'sprints:detail' s.id %}" class="btn-secondary" style="font-size:0.8rem;padding:4px 12px;">Health Details →</a>
               </div>
@@ -1217,8 +1336,50 @@
         SprintlyApp.showToast(data.error || "Failed to apply allocations.", "error");
       }
     } catch (e) {
-      SprintlyApp.showToast("Failed to apply allocations.", "error");
+      console.warn(e);
     }
   }
 </script>
+<!-- Complete Sprint Modal for Project Tabs -->
+<div id="completeSprintModal" class="modal-overlay" onclick="if(event.target===this) SprintlyApp.closeCompleteSprintModal()">
+  <div class="modal-card" style="max-width:480px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;border:1px solid rgba(16,185,129,0.25);">
+          <i data-lucide="check-circle" style="width:20px;height:20px;"></i>
+        </div>
+        <h3 id="completeSprintModalTitle" style="font-size:1.15rem;font-weight:800;color:var(--text-primary);margin:0;">Complete Sprint</h3>
+      </div>
+      <button type="button" class="btn-icon" onclick="SprintlyApp.closeCompleteSprintModal()">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      </button>
+    </div>
+
+    <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6;margin-bottom:16px;">
+      Are you ready to complete <strong style="color:var(--text-primary);" id="completeSprintNameText">this sprint</strong>? Completed tasks will be archived with full velocity telemetry, and incomplete tasks will roll over to your selected destination.
+    </p>
+
+    <form method="POST" id="completeSprintModalForm" onsubmit="SprintlyApp.submitCompleteSprint(event)">
+      {% csrf_token %}
+      <div class="form-group" style="margin-bottom:18px;">
+        <label class="form-label" style="font-size:0.82rem;font-weight:700;">Move Incomplete Tasks To:</label>
+        <select name="target_sprint_id" class="form-control" style="width:100%;padding:8px 12px;font-size:0.9rem;">
+          <option value="backlog">📦 Product Backlog (Unassigned)</option>
+          {% for next_s in sprints %}
+            {% if next_s.status == 'PLANNING' %}
+              <option value="{{ next_s.id }}">⚡ {{ next_s.name }} (Planned)</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button type="button" class="btn-secondary" onclick="SprintlyApp.closeCompleteSprintModal()">Cancel</button>
+        <button type="submit" class="btn-primary" style="background:#10b981;border-color:#10b981;box-shadow:0 4px 12px rgba(16,185,129,0.35);" id="confirmCompleteSprintBtn">
+          <i data-lucide="check-circle" style="width:14px;height:14px;"></i> Confirm & Complete Sprint
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

@@ -1,6 +1,8 @@
 from datetime import date, timedelta
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db.models import Sum
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,11 +10,19 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .models import Sprint
 from projects.models import Project
+from projects.views import check_project_access
 from issues.models import Issue
 from analytics.health_service import SprintHealthEngine
+from accounts.models import User
 
+@login_required
+@ensure_csrf_cookie
 def sprint_detail_page(request, pk):
     sprint = get_object_or_404(Sprint.objects.select_related("project"), pk=pk)
+    if not check_project_access(sprint.project, request.user):
+        messages.error(request, "Permission denied.")
+        return redirect("projects:list")
+
     issues = sprint.issues.select_related("assignee", "reporter").all()
     
     total_pts = sum(i.story_points for i in issues)
@@ -24,7 +34,6 @@ def sprint_detail_page(request, pk):
 
     # Team members in this sprint
     assignee_ids = issues.filter(assignee__isnull=False).values_list("assignee_id", flat=True).distinct()
-    from accounts.models import User
     team_members = User.objects.filter(id__in=assignee_ids)
 
     context = {
@@ -42,8 +51,15 @@ def sprint_detail_page(request, pk):
     return render(request, "sprints/sprint_detail.html", context)
 
 
+@login_required
 def sprint_start_action(request, pk):
     sprint = get_object_or_404(Sprint, pk=pk)
+    if not check_project_access(sprint.project, request.user):
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({"status": "error", "message": "Permission denied."}, status=403)
+        messages.error(request, "Permission denied.")
+        return redirect("projects:list")
+
     if request.method == "POST":
         duration = int(request.POST.get("duration_days", 14))
         start_date = date.today()
@@ -65,20 +81,33 @@ def sprint_start_action(request, pk):
             pass
 
         SprintHealthEngine.evaluate_sprint(sprint)
-        messages.success(request, f"Sprint '{sprint.name}' is now ACTIVE!")
+        msg = f"Sprint '{sprint.name}' is now ACTIVE!"
+        messages.success(request, msg)
+
+        redirect_url = f"/projects/{sprint.project.pk}/sprints/"
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({"status": "success", "message": msg, "redirect_url": redirect_url})
+        return redirect(redirect_url)
     
-    return redirect("sprints:detail", pk=sprint.pk)
+    return redirect(f"/projects/{sprint.project.pk}/sprints/")
 
 
+@login_required
 def sprint_complete_action(request, pk):
     sprint = get_object_or_404(Sprint, pk=pk)
+    if not check_project_access(sprint.project, request.user):
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({"status": "error", "message": "Permission denied."}, status=403)
+        messages.error(request, "Permission denied.")
+        return redirect("projects:list")
+
     if request.method == "POST":
         target_sprint_id = request.POST.get("target_sprint_id")
         incomplete_issues = sprint.issues.exclude(status="DONE")
         incomplete_count = incomplete_issues.count()
 
         if target_sprint_id and target_sprint_id != "backlog":
-            target_sprint = Sprint.objects.filter(pk=target_sprint_id).first()
+            target_sprint = Sprint.objects.filter(pk=target_sprint_id, project=sprint.project).first()
             if target_sprint:
                 incomplete_issues.update(sprint=target_sprint)
         else:
@@ -91,9 +120,24 @@ def sprint_complete_action(request, pk):
         try:
             from mongodb_engine.manager import mongo_manager
             mongo_manager.sync_sprint(sprint)
+            for iss in sprint.issues.all():
+                mongo_manager.sync_issue(iss)
         except Exception:
             pass
 
-        messages.success(request, f"Sprint '{sprint.name}' completed! {incomplete_count} incomplete tasks rolled over.")
+        SprintHealthEngine.evaluate_sprint(sprint)
 
-    return redirect("projects:detail", pk=sprint.project.pk)
+        msg = f"Sprint '{sprint.name}' completed! {incomplete_count} incomplete task(s) rolled over."
+        messages.success(request, msg)
+
+        redirect_url = f"/projects/{sprint.project.pk}/sprints/"
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("Accept", ""):
+            return JsonResponse({
+                "status": "success",
+                "message": msg,
+                "redirect_url": redirect_url
+            })
+
+        return redirect(redirect_url)
+
+    return redirect(f"/projects/{sprint.project.pk}/sprints/")

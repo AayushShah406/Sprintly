@@ -89,3 +89,141 @@ class SecurityAndAuthTests(TestCase):
         self.assertEqual(res.headers.get("X-Content-Type-Options"), "nosniff")
         self.assertEqual(res.headers.get("X-Frame-Options"), "SAMEORIGIN")
         self.assertIn("Content-Security-Policy", res.headers)
+
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+class ProfileAPITests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="alexdev",
+            email="alex@sprintly.io",
+            password="SecurePassword123!",
+            first_name="Alex",
+            last_name="Rivers",
+            role="DEVELOPER"
+        )
+        self.other_user = User.objects.create_user(
+            username="janesmith",
+            email="jane@sprintly.io",
+            password="SecurePassword123!",
+            first_name="Jane",
+            last_name="Smith",
+            role="MANAGER"
+        )
+
+    def test_get_profile_authenticated(self):
+        self.client.force_authenticate(user=self.user)
+        res = self.client.get(reverse("accounts:api_profile"))
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["username"], "alexdev")
+        self.assertEqual(data["email"], "alex@sprintly.io")
+        self.assertEqual(data["first_name"], "Alex")
+        self.assertEqual(data["last_name"], "Rivers")
+        self.assertIn("job_title", data)
+        self.assertIn("location", data)
+        self.assertIn("bio", data)
+        self.assertIn("role", data)
+        self.assertIn("department", data)
+        self.assertIn("joined_date", data)
+        self.assertNotIn("password", data)
+        self.assertNotIn("password_hash", data)
+
+    def test_get_profile_unauthenticated_returns_401(self):
+        res = self.client.get(reverse("accounts:api_profile"))
+        self.assertEqual(res.status_code, 401)
+
+    def test_put_profile_updates_and_persists_to_database(self):
+        self.client.force_authenticate(user=self.user)
+        payload = {
+            "first_name": "Alexander",
+            "last_name": "Rivers-Stone",
+            "job_title": "Principal Agile Architect",
+            "location": "San Francisco, CA",
+            "bio": "Building next-generation agile tooling and scalable cloud architectures."
+        }
+        res = self.client.put(reverse("accounts:api_profile"), payload, format="json")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data.get("success"))
+        self.assertEqual(data["first_name"], "Alexander")
+        self.assertEqual(data["job_title"], "Principal Agile Architect")
+        self.assertEqual(data["location"], "San Francisco, CA")
+
+        # Database verification
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Alexander")
+        self.assertEqual(self.user.last_name, "Rivers-Stone")
+        profile = self.user.profile
+        self.assertEqual(profile.job_title, "Principal Agile Architect")
+        self.assertEqual(profile.location, "San Francisco, CA")
+        self.assertEqual(profile.bio, "Building next-generation agile tooling and scalable cloud architectures.")
+
+    def test_put_profile_email_uniqueness_enforced(self):
+        self.client.force_authenticate(user=self.user)
+        # Attempt to claim Jane's email
+        res = self.client.put(reverse("accounts:api_profile"), {
+            "email": "jane@sprintly.io"
+        }, format="json")
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        self.assertIn("error", data)
+        self.assertIn("already in use", data["error"].lower())
+
+    def test_put_profile_username_uniqueness_enforced(self):
+        self.client.force_authenticate(user=self.user)
+        # Attempt to claim Jane's username
+        res = self.client.put(reverse("accounts:api_profile"), {
+            "username": "janesmith"
+        }, format="json")
+        self.assertEqual(res.status_code, 400)
+        data = res.json()
+        self.assertIn("error", data)
+        self.assertIn("already taken", data["error"].lower())
+
+    def test_put_profile_readonly_fields_immutable(self):
+        self.client.force_authenticate(user=self.user)
+        original_joined = self.user.profile.created_at
+        # Attempt to modify role and department
+        res = self.client.put(reverse("accounts:api_profile"), {
+            "first_name": "Alex",
+            "role": "ADMIN",
+            "department": "Executive Leadership",
+            "joined_date": "2010-01-01"
+        }, format="json")
+        self.assertEqual(res.status_code, 200)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.role, "DEVELOPER")
+        self.assertEqual(self.user.profile.department, "Engineering")
+
+    def test_put_profile_picture_upload(self):
+        self.client.force_authenticate(user=self.user)
+        # Create a small valid 1x1 GIF
+        gif_bytes = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+        avatar = SimpleUploadedFile("test_avatar.gif", gif_bytes, content_type="image/gif")
+
+        res = self.client.put(reverse("accounts:api_profile"), {
+            "first_name": "Alex",
+            "profile_picture": avatar
+        }, format="multipart")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIsNotNone(data["profile_picture"])
+
+        self.user.profile.refresh_from_db()
+        self.assertTrue(bool(self.user.profile.profile_picture))
+
+    def test_jwt_bearer_authentication_for_profile_api(self):
+        tokens = generate_jwt_tokens(self.user)
+        client = APIClient()
+        # Call API using JWT Bearer token in header without session login
+        res = client.get(
+            reverse("accounts:api_profile"),
+            HTTP_AUTHORIZATION=f"Bearer {tokens['access']}"
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["username"], "alexdev")
+

@@ -22,10 +22,10 @@ Sprintly is a full-stack, enterprise-grade project management system engineered 
 - **Option B: Manual Task Allocation**:
   - Interactive teammate assignment with role badges and capacity indicators directly from the Team and Backlog views.
 
-### 3. 💬 Real-Time Team Communication Chat App
-- **Project Team Channels**: Dedicated communication streams (`#general`, `#dev-team`, `#sprint-planning`).
-- **Direct Messaging (DMs)**: Private 1-on-1 chats between teammates with live online status indicators.
-- **Live Synchronized Stream**: Auto-refreshing message stream with member badges, avatar colors, and timestamps.
+### 3. 🔔 Team Collaboration & Notification Center
+- **Direct Workspace Invitations**: Invite team members by email/username with custom roles (Developer, QA Engineer, Designer, Architect).
+- **Real-Time Notification Inbox**: Unread badges, mark-as-read, and automatic member addition when team invites are accepted.
+- **Activity Stream Alerts**: Live updates on ticket movements, sprint launches, and team membership changes.
 
 ### 4. 🧠 Sprintly AI Copilot (Live Telemetry Engine)
 - **Live Workspace Intelligence**: AI has direct live access to workspace metrics, pending/active project counts, and bottlenecks.
@@ -153,11 +153,12 @@ All **24 test suites** run in under 30 seconds with 100% test coverage.
 - `POST /api/ai/apply-action/` — 1-click execution of AI plans, allocations, and subtasks.
 - `POST /api/ai/analyze-sprint/` — Sprint risk and velocity diagnostics.
 
-### Team Communication & Notifications
-- `GET /chat/` — Team Chat UI with Channels & DMs.
-- `GET /api/notifications/chat/rooms/<id>/messages/` — Fetch recent room chat messages.
-- `POST /api/notifications/chat/rooms/<id>/messages/` — Post a new message to a channel.
+### Team Notifications & Collaboration
+- `GET /notifications/` — Notification Inbox UI.
 - `GET /api/notifications/api/` — Navbar live notification badge & list.
+- `POST /notifications/<id>/mark-read/` — Mark individual notification as read.
+- `POST /notifications/mark-all-read/` — Mark all notifications as read.
+- `POST /notifications/<id>/accept/` — Accept team invitation & automatically join project team.
 
 ### Projects, Sprints & Issues
 - `GET /api/projects/<id>/roadmap/gantt/` — Real-time Gantt roadmap data stream.

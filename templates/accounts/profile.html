@@ -1,88 +1,207 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}User Profile | Sprintly{% endblock %}
+{% block title %}My Profile | Sprintly Enterprise{% endblock %}
 
 {% block content %}
-<div class="dashboard-page-container" style="max-width:750px;margin:0 auto;">
+<div class="dashboard-page-container" style="max-width:880px;margin:0 auto;padding-bottom:48px;">
   
-  <div class="view-header" style="margin-bottom:20px;">
+  <!-- View Header -->
+  <div class="view-header" style="margin-bottom:24px;">
     <div class="view-title-group">
-      <h1>
-        <i data-lucide="user" style="width:26px;height:26px;color:#4f46e5;"></i>
-        <span>User Profile & Security</span>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="badge-priority priority-LOW" style="font-size:0.7rem;letter-spacing:0.5px;text-transform:uppercase;">Account Workspace</span>
+      </div>
+      <h1 style="display:flex;align-items:center;gap:10px;font-size:1.6rem;font-weight:900;letter-spacing:-0.5px;color:var(--text-primary);">
+        <i data-lucide="user-check" style="width:28px;height:28px;color:var(--accent-primary);"></i>
+        <span>User Profile & Identity</span>
       </h1>
-      <div class="view-subtitle">Manage personal account details and password security.</div>
+      <div class="view-subtitle" style="color:var(--text-secondary);font-size:0.9rem;">
+        Manage your personal account credentials, organization details, and public bio.
+      </div>
     </div>
 
-    <a href="{% url 'accounts:logout' %}" class="btn-secondary" style="color:#dc2626;border-color:#fecaca;">
+    <a href="{% url 'accounts:logout' %}" class="btn-secondary" style="color:#ef4444;border-color:rgba(239,68,68,0.3);font-size:0.85rem;padding:8px 16px;">
       <i data-lucide="log-out" style="width:16px;height:16px;"></i> Log Out
     </a>
   </div>
 
-  <div class="dash-card" style="margin-bottom:24px;">
-    <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-bottom:16px;">Personal Information</h3>
-
-    <form method="POST">
-      {% csrf_token %}
-      
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
-        <div class="avatar-circle" style="background:{{ current_user.avatar_color }};width:56px;height:56px;font-size:1.3rem;">
-          {{ current_user.initials }}
-        </div>
-        <div>
-          <div style="font-weight:800;font-size:1.1rem;color:var(--text-primary);">{{ current_user.display_name }}</div>
-          <div style="font-size:0.85rem;color:var(--text-secondary);">@{{ current_user.username }} • {{ current_user.email }}</div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="form-group">
-          <label class="form-label">First Name</label>
-          <input type="text" name="first_name" class="form-control" value="{{ current_user.first_name }}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Last Name</label>
-          <input type="text" name="last_name" class="form-control" value="{{ current_user.last_name }}">
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="form-group">
-          <label class="form-label">Professional Title</label>
-          <input type="text" name="title" class="form-control" value="{{ current_user.title }}">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Avatar Color</label>
-          <select name="avatar_color" class="form-control">
-            <option value="#4f46e5" {% if current_user.avatar_color == '#4f46e5' %}selected{% endif %}>Indigo</option>
-            <option value="#7c3aed" {% if current_user.avatar_color == '#7c3aed' %}selected{% endif %}>Purple</option>
-            <option value="#0284c7" {% if current_user.avatar_color == '#0284c7' %}selected{% endif %}>Ocean Blue</option>
-            <option value="#059669" {% if current_user.avatar_color == '#059669' %}selected{% endif %}>Emerald Green</option>
-            <option value="#db2777" {% if current_user.avatar_color == '#db2777' %}selected{% endif %}>Pink</option>
-          </select>
-        </div>
-      </div>
-
-      <h3 style="font-size:1.05rem;font-weight:800;color:var(--text-primary);margin:24px 0 14px;border-top:1px solid var(--border-subtle);padding-top:18px;">
-        Change Password
-      </h3>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="form-group">
-          <label class="form-label">Current Password</label>
-          <input type="password" name="old_password" class="form-control" placeholder="••••••••">
-        </div>
-        <div class="form-group">
-          <label class="form-label">New Password</label>
-          <input type="password" name="new_password" class="form-control" placeholder="••••••••">
-        </div>
-      </div>
-
-      <div style="display:flex;justify-content:flex-end;margin-top:20px;">
-        <button type="submit" class="btn-primary">Save Profile & Password</button>
-      </div>
-    </form>
+  <!-- Dynamic Notification Banners -->
+  <div id="profileAlertContainer" style="margin-bottom:16px;">
+    <div id="profileSuccessBanner" class="alert-banner success" style="display:none;padding:12px 16px;border-radius:var(--radius-md);background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:#10b981;font-size:0.88rem;font-weight:600;display:none;align-items:center;gap:10px;">
+      <i data-lucide="check-circle" style="width:18px;height:18px;flex-shrink:0;"></i>
+      <span id="profileSuccessText">Profile updated successfully.</span>
+    </div>
+    <div id="profileErrorBanner" class="alert-banner error" style="display:none;padding:12px 16px;border-radius:var(--radius-md);background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:0.88rem;font-weight:600;display:none;align-items:center;gap:10px;">
+      <i data-lucide="alert-triangle" style="width:18px;height:18px;flex-shrink:0;"></i>
+      <span id="profileErrorText">An error occurred while updating profile.</span>
+    </div>
   </div>
+
+  <!-- Profile Form -->
+  <form id="profileForm" onsubmit="SprintlyProfile.saveProfile(event)" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- ================================================================= -->
+    <!-- SECTION 1: PROFILE INFORMATION (EDITABLE)                         -->
+    <!-- ================================================================= -->
+    <div class="dash-card" style="margin-bottom:24px;padding:24px;border:1px solid var(--border-medium);border-radius:var(--radius-lg);background:var(--bg-card);box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border-subtle);">
+        <div>
+          <h2 style="font-size:1.15rem;font-weight:800;color:var(--text-primary);margin:0 0 2px;">Profile Information</h2>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Your personal details and how other team members see you across Sprintly.</div>
+        </div>
+        <span class="badge-priority priority-LOW" style="font-size:0.7rem;font-weight:700;">Editable</span>
+      </div>
+
+      <!-- Profile Picture Uploader Row -->
+      <div style="display:flex;align-items:center;gap:22px;margin-bottom:24px;padding:16px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:var(--radius-md);">
+        <div id="avatarPreviewContainer" style="position:relative;width:76px;height:76px;border-radius:50%;overflow:hidden;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.15);border:2px solid var(--accent-primary);background:{{ user.avatar_color|default:'#4f46e5' }};cursor:pointer;" onclick="document.getElementById('profilePictureInput').click()" title="Click to change photo">
+          <!-- Initials Fallback (Always in DOM) -->
+          <div id="avatarInitialsFallback" class="avatar-circle" style="{% if profile.profile_picture_url %}display:none;{% else %}display:flex;{% endif %}background:{{ user.avatar_color|default:'#4f46e5' }};width:100%;height:100%;font-size:1.6rem;font-weight:800;align-items:center;justify-content:center;color:#fff;user-select:none;">
+            {{ user.initials|default:'AD' }}
+          </div>
+          <!-- Profile Picture Image (Always in DOM with error fallback) -->
+          <img id="avatarPreviewImg" 
+               src="{% if profile.profile_picture_url %}{{ profile.profile_picture_url }}{% endif %}" 
+               alt="" 
+               onerror="SprintlyProfile.handleImageError(this)" 
+               onload="SprintlyProfile.handleImageLoad(this)" 
+               style="{% if profile.profile_picture_url %}display:block;{% else %}display:none;{% endif %}position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;">
+        </div>
+
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);margin-bottom:4px;">Profile Picture</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px;">Supports JPG, PNG, WEBP, or GIF. Maximum file size 5MB.</div>
+          
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="file" id="profilePictureInput" name="profile_picture" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none;" onchange="SprintlyProfile.handleImageSelect(event)">
+            <button type="button" class="btn-secondary" style="font-size:0.82rem;padding:6px 14px;" onclick="document.getElementById('profilePictureInput').click()">
+              <i data-lucide="upload-cloud" style="width:15px;height:15px;"></i> Change Photo
+            </button>
+            <button type="button" id="removePhotoBtn" class="btn-icon" style="font-size:0.8rem;color:#ef4444;border-color:rgba(239,68,68,0.2);" onclick="SprintlyProfile.removeProfilePicture()" title="Remove Photo">
+              <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+            </button>
+            <input type="hidden" id="removePictureFlag" name="remove_picture" value="false">
+          </div>
+        </div>
+      </div>
+
+      <!-- Names Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:block;">First Name *</label>
+          <input type="text" id="profileFirstName" name="first_name" class="form-control" value="{{ user.first_name }}" placeholder="e.g. Aayush" required style="width:100%;padding:9px 12px;background:var(--bg-primary);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);font-family:inherit;font-size:0.88rem;">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:block;">Last Name</label>
+          <input type="text" id="profileLastName" name="last_name" class="form-control" value="{{ user.last_name }}" placeholder="e.g. Shah" style="width:100%;padding:9px 12px;background:var(--bg-primary);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);font-family:inherit;font-size:0.88rem;">
+        </div>
+      </div>
+
+      <!-- Username & Email Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:block;">Username *</label>
+          <div style="position:relative;">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-weight:700;font-size:0.85rem;">@</span>
+            <input type="text" id="profileUsername" name="username" class="form-control" value="{{ user.username }}" placeholder="username" required style="width:100%;padding:9px 12px 9px 26px;background:var(--bg-primary);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);font-family:inherit;font-size:0.88rem;">
+          </div>
+          <span style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;display:block;">Used for workspace mentions and task assignments.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:block;">Email Address *</label>
+          <div style="position:relative;">
+            <input type="email" id="profileEmail" name="email" class="form-control" value="{{ user.email }}" placeholder="you@sprintly.io" required style="width:100%;padding:9px 12px;background:var(--bg-primary);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);font-family:inherit;font-size:0.88rem;">
+          </div>
+          <span style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;display:block;">Primary email for OTP authentication and notifications.</span>
+        </div>
+      </div>
+
+      <!-- Job Title & Location Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:block;">Job Title</label>
+          <input type="text" id="profileJobTitle" name="job_title" class="form-control" value="{{ profile.job_title|default:user.title|default:'' }}" placeholder="e.g. Senior Frontend Engineer" style="width:100%;padding:9px 12px;background:var(--bg-primary);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);font-family:inherit;font-size:0.88rem;">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:block;">Location</label>
+          <input type="text" id="profileLocation" name="location" class="form-control" value="{{ profile.location|default:'' }}" placeholder="e.g. San Francisco, CA or Remote" style="width:100%;padding:9px 12px;background:var(--bg-primary);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);font-family:inherit;font-size:0.88rem;">
+        </div>
+      </div>
+
+      <!-- Bio Area -->
+      <div class="form-group" style="margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin:0;">Bio</label>
+          <span id="bioCharCounter" style="font-size:0.74rem;color:var(--text-muted);">0 / 1000</span>
+        </div>
+        <textarea id="profileBio" name="bio" class="form-control" rows="4" maxlength="1000" placeholder="Brief overview of your engineering domain, focus areas, and technical interests..." oninput="SprintlyProfile.updateBioCount()" style="width:100%;padding:10px 12px;background:var(--bg-primary);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);font-family:inherit;font-size:0.88rem;resize:vertical;line-height:1.5;">{{ profile.bio|default:'' }}</textarea>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- SECTION 2: WORK INFORMATION (READ-ONLY)                           -->
+    <!-- ================================================================= -->
+    <div class="dash-card" style="margin-bottom:28px;padding:24px;border:1px solid var(--border-medium);border-radius:var(--radius-lg);background:var(--bg-card);box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border-subtle);">
+        <div>
+          <h2 style="font-size:1.15rem;font-weight:800;color:var(--text-primary);margin:0 0 2px;">Work Information</h2>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Enterprise organization assignments. Read-only and managed by workspace administrators.</div>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;font-weight:700;color:var(--text-muted);background:var(--bg-secondary);padding:3px 8px;border-radius:var(--radius-full);border:1px solid var(--border-subtle);">
+          <i data-lucide="lock" style="width:12px;height:12px;"></i> Read-Only
+        </span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;">
+        <!-- Role -->
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+            <span>Role</span>
+            <i data-lucide="lock" style="width:12px;height:12px;color:var(--text-muted);"></i>
+          </label>
+          <div style="position:relative;">
+            <input type="text" id="profileRole" class="form-control readonly-field" value="{{ user.get_role_display }}" readonly disabled style="width:100%;padding:9px 12px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:var(--radius-md);color:var(--text-secondary);font-family:inherit;font-size:0.88rem;cursor:not-allowed;font-weight:600;">
+          </div>
+        </div>
+
+        <!-- Department -->
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+            <span>Department</span>
+            <i data-lucide="lock" style="width:12px;height:12px;color:var(--text-muted);"></i>
+          </label>
+          <div style="position:relative;">
+            <input type="text" id="profileDepartment" class="form-control readonly-field" value="{{ profile.department|default:'Engineering' }}" readonly disabled style="width:100%;padding:9px 12px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:var(--radius-md);color:var(--text-secondary);font-family:inherit;font-size:0.88rem;cursor:not-allowed;font-weight:600;">
+          </div>
+        </div>
+
+        <!-- Joined Date -->
+        <div class="form-group">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+            <span>Joined Date</span>
+            <i data-lucide="lock" style="width:12px;height:12px;color:var(--text-muted);"></i>
+          </label>
+          <div style="position:relative;">
+            <input type="text" id="profileJoinedDate" class="form-control readonly-field" value="{{ user.created_at|date:'F d, Y' }}" readonly disabled style="width:100%;padding:9px 12px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:var(--radius-md);color:var(--text-secondary);font-family:inherit;font-size:0.88rem;cursor:not-allowed;font-weight:600;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- ACTION TOOLBAR                                                    -->
+    <!-- ================================================================= -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 0;border-top:1px solid var(--border-subtle);">
+      <a href="{% url 'dashboard:home' %}" class="btn-secondary" style="font-size:0.88rem;padding:9px 18px;">Cancel</a>
+      <button type="submit" id="saveProfileBtn" class="btn-primary" style="font-size:0.88rem;padding:9px 24px;display:flex;align-items:center;gap:8px;">
+        <i data-lucide="save" id="saveBtnIcon" style="width:16px;height:16px;"></i>
+        <span id="saveBtnText">Save Changes</span>
+      </button>
+    </div>
+  </form>
 
 </div>
 {% endblock %}

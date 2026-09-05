@@ -4,18 +4,619 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}Sprintly - Enterprise Agile Platform{% endblock %}</title>
   
-  <!-- Distinctive SaaS Typography: Outfit (Display/Headings), Plus Jakarta Sans (UI Body), JetBrains Mono (Technical/Keys) -->
+  <!-- Distinctive SaaS Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="{% static 'css/sprintly.css' %}">
+  <link rel="stylesheet" href="{% static 'css/sprintly.css' %}?v={% now 'U' %}">
+  
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Chart.js for Burndown, Velocity & Analytics -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* =========================================================================
+       CRITICAL SAAS LAYOUT & UI CORE
+       ========================================================================= */
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f8fafc;
+      --bg-sidebar: #ffffff;
+      --bg-navbar: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --border-subtle: #e2e8f0;
+      --border-medium: #cbd5e1;
+      --accent-primary: #4f46e5;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-full: 9999px;
+      --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
+      --font-display: "Outfit", "Plus Jakarta Sans", sans-serif;
+      --font-body: "Plus Jakarta Sans", -apple-system, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #080c16;
+      --bg-secondary: #0f1629;
+      --bg-card: #131b2e;
+      --bg-card-hover: #19243d;
+      --bg-sidebar: #0a0f1d;
+      --bg-navbar: #0a0f1d;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.14);
+      --accent-primary: #6366f1;
+      --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    /* Top Navbar */
+    .sprintly-navbar {
+      height: 58px;
+      background: var(--bg-navbar);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+    }
+
+    /* Navbar Center Controls */
+    .navbar-center-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      max-width: 580px;
+      margin: 0 24px;
+    }
+
+    .workspace-dropdown-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      width: 180px;
+      height: 36px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      transition: all 0.15s ease;
+    }
+
+    .workspace-dropdown-wrap:hover {
+      border-color: var(--accent-primary);
+      background: var(--bg-card-hover);
+    }
+
+    .workspace-icon {
+      position: absolute;
+      left: 10px;
+      width: 14px;
+      height: 14px;
+      color: var(--accent-primary);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .workspace-dropdown-select {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 0 28px 0 32px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      position: relative;
+      z-index: 1;
+    }
+
+    .workspace-chevron {
+      position: absolute;
+      right: 10px;
+      width: 13px;
+      height: 13px;
+      color: var(--text-muted);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .global-search-command {
+      flex: 1;
+      height: 36px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      outline: none;
+      font-family: inherit;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+      min-width: 0;
+    }
+
+    .global-search-command:hover {
+      border-color: var(--accent-primary);
+      background: var(--bg-card);
+    }
+
+    .search-command-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .search-command-icon {
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .search-command-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+
+    .search-command-kbd {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      font-family: monospace;
+      color: var(--text-secondary);
+      font-weight: 700;
+      flex-shrink: 0;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    /* Layout & Sidebar */
+    .sprintly-layout {
+      display: flex;
+      min-height: calc(100vh - 58px);
+    }
+
+    .sprintly-sidebar {
+      width: 240px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      padding: 16px 12px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 58px);
+      position: sticky;
+      top: 58px;
+      box-sizing: border-box;
+      z-index: 50;
+    }
+
+    .sidebar-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 2px;
+    }
+
+    .sidebar-menu::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar-menu::-webkit-scrollbar-thumb {
+      background: var(--border-subtle);
+      border-radius: 4px;
+    }
+
+    .sidebar-footer {
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 10px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .system-status-card {
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      border-radius: var(--radius-md);
+      padding: 9px 11px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .system-status-card:hover {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.45);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.18);
+    }
+
+    .status-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      position: relative;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+      flex-shrink: 0;
+    }
+
+    .status-indicator-dot::after {
+      content: "";
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      border-radius: 50%;
+      border: 1.5px solid #10b981;
+      animation: statusPulse 2s infinite ease-out;
+    }
+
+    @keyframes statusPulse {
+      0% { transform: scale(1); opacity: 0.9; }
+      70% { transform: scale(2.2); opacity: 0; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    .status-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.2px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.12);
+      padding: 2px 7px;
+      border-radius: 9999px;
+      line-height: 1.2;
+    }
+
+    .status-micro-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+      padding-top: 5px;
+      border-top: 1px dashed rgba(16, 185, 129, 0.18);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .status-latency {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-version {
+      font-family: var(--font-mono, monospace);
+      font-weight: 600;
+      opacity: 0.85;
+    }
+
+    .system-status-popover {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      padding: 12px;
+      z-index: 120;
+      animation: popoverFadeIn 0.2s ease-out;
+    }
+
+    .system-status-popover.open {
+      display: block;
+    }
+
+    @keyframes popoverFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .status-popover-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+    }
+
+    .status-service-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .status-service-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      padding: 5px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+    }
+
+    .status-tag.online {
+      color: #10b981;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-tag.online::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    .menu-label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      padding: 10px 12px 4px;
+      text-transform: uppercase;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: rgba(79, 70, 229, 0.12);
+      color: var(--accent-primary);
+      font-weight: 800;
+    }
+
+    .sprintly-main {
+      flex: 1;
+      overflow-y: auto;
+      min-width: 0;
+    }
+
+    /* Dashboard Page Grid */
+    .dashboard-page-container {
+      padding: 24px 32px;
+      max-width: 1560px;
+      margin: 0 auto;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .metric-card-indigo { border-top: 3px solid #6366f1; }
+    .metric-card-amber { border-top: 3px solid #f59e0b; }
+    .metric-card-rose { border-top: 3px solid #f43f5e; }
+    .metric-card-emerald { border-top: 3px solid #10b981; }
+
+    .dashboard-content-layout {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .dash-col-left, .dash-col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      min-width: 0;
+    }
+
+    .dash-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 20px 22px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .dash-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    /* Kanban Board Layout */
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(260px, 1fr));
+      gap: 14px;
+      overflow-x: auto;
+      padding-bottom: 16px;
+    }
+
+    .kanban-column {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 12px;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .kanban-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      cursor: grab;
+      transition: all 0.15s ease;
+    }
+
+    .kanban-card:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-2px);
+    }
+
+    .kanban-card.dragging {
+      opacity: 0.5;
+      transform: scale(0.98);
+    }
+
+    /* Modal Overlays */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-overlay.active, .modal-overlay.open {
+      display: flex !important;
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-content-layout { grid-template-columns: 1fr; }
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
 </head>
 <body>
 
@@ -33,24 +634,28 @@
       </div>
     </div>
 
-    <!-- Center Navigation Search & Selectors -->
-    <div class="nav-center">
-      <div class="nav-select-wrapper">
-        <select id="projectSelector" class="nav-select" onchange="if(this.value) window.location.href='/projects/' + this.value + '/';">
+    <!-- Center Navigation Search & Workspace Switcher -->
+    <div class="navbar-center-group">
+      <div class="workspace-dropdown-wrap">
+        <i data-lucide="layers" class="workspace-icon"></i>
+        <select id="projectSelector" class="workspace-dropdown-select" onchange="if(this.value) window.location.href='/projects/' + this.value + '/';" title="Switch Active Workspace">
           {% for p in all_projects %}
             <option value="{{ p.id }}" {% if p.id == project.id %}selected{% endif %}>
-              {{ p.key }} - {{ p.name }}
+              {{ p.key }} – {{ p.name }}
             </option>
           {% empty %}
             <option value="" disabled selected>No Projects</option>
           {% endfor %}
         </select>
+        <i data-lucide="chevron-down" class="workspace-chevron"></i>
       </div>
 
-      <button class="search-command-btn" onclick="SprintlyApp.openCommandPalette()">
-        <i data-lucide="search" style="width:14px;height:14px;"></i>
-        <span>Search tickets, projects, sprints...</span>
-        <kbd class="kbd-shortcut">Ctrl+K</kbd>
+      <button class="global-search-command" onclick="SprintlyApp.openCommandPalette()" title="Search (Ctrl+K)">
+        <div class="search-command-left">
+          <i data-lucide="search" class="search-command-icon"></i>
+          <span class="search-command-label">Search tickets, projects, sprints...</span>
+        </div>
+        <kbd class="search-command-kbd">Ctrl K</kbd>
       </button>
     </div>
 
@@ -76,10 +681,18 @@
       </a>
 
       <!-- User Profile Dropdown Button -->
-      <a href="{% url 'accounts:profile' %}" class="user-avatar-btn" title="My Profile">
-        <div class="avatar-circle" style="background:{{ current_user.avatar_color|default:'#4f46e5' }};">
-          {{ current_user.initials|default:'AD' }}
-        </div>
+      <a href="{% url 'accounts:profile' %}" id="navbarUserAvatarBtn" class="user-avatar-btn" title="My Profile" style="overflow:hidden;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;position:relative;">
+        {% if current_user.get_profile.profile_picture_url %}
+          <img id="navbarAvatarImg" src="{{ current_user.get_profile.profile_picture_url }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';document.getElementById('navbarAvatarInitials').style.display='flex';">
+          <div id="navbarAvatarInitials" class="avatar-circle" style="display:none;background:{{ current_user.avatar_color|default:'#4f46e5' }};width:100%;height:100%;font-size:0.8rem;font-weight:800;align-items:center;justify-content:center;color:#fff;">
+            {{ current_user.initials|default:'AD' }}
+          </div>
+        {% else %}
+          <img id="navbarAvatarImg" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none';document.getElementById('navbarAvatarInitials').style.display='flex';">
+          <div id="navbarAvatarInitials" class="avatar-circle" style="display:flex;background:{{ current_user.avatar_color|default:'#4f46e5' }};width:100%;height:100%;font-size:0.8rem;font-weight:800;align-items:center;justify-content:center;color:#fff;">
+            {{ current_user.initials|default:'AD' }}
+          </div>
+        {% endif %}
       </a>
     </div>
   </header>
@@ -98,37 +711,33 @@
           <i data-lucide="check-square" style="width:18px;height:18px;"></i>
           <span>My Work</span>
         </a>
-        <a href="{% url 'projects:list' %}" class="nav-item {% if request.resolver_match.app_name == 'projects' and request.resolver_match.url_name == 'list' %}active{% endif %}">
+        <a href="{% url 'projects:list' %}" class="nav-item {% if request.resolver_match.url_name == 'list' or request.resolver_match.url_name == 'detail' %}active{% endif %}">
           <i data-lucide="folder" style="width:18px;height:18px;"></i>
           <span>Projects</span>
         </a>
-        <a href="{% if project.id %}/projects/{{ project.id }}/board/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'board' %}active{% endif %}">
-          <i data-lucide="trello" style="width:18px;height:18px;"></i>
+        <a href="{% url 'dashboard:board' %}" class="nav-item {% if active_tab == 'board' or request.resolver_match.url_name == 'board' %}active{% endif %}">
+          <i data-lucide="kanban" style="width:18px;height:18px;"></i>
           <span>Board</span>
         </a>
-        <a href="{% if project.id %}/projects/{{ project.id }}/backlog/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'backlog' %}active{% endif %}">
+        <a href="{% url 'dashboard:backlog' %}" class="nav-item {% if active_tab == 'backlog' or request.resolver_match.url_name == 'backlog' %}active{% endif %}">
           <i data-lucide="layers" style="width:18px;height:18px;"></i>
           <span>Backlog</span>
         </a>
-        <a href="{% if project.id %}/projects/{{ project.id }}/sprints/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'sprints' %}active{% endif %}">
+        <a href="{% url 'dashboard:sprints' %}" class="nav-item {% if active_tab == 'sprints' or request.resolver_match.url_name == 'sprints' %}active{% endif %}">
           <i data-lucide="zap" style="width:18px;height:18px;"></i>
           <span>Sprints</span>
         </a>
-        <a href="{% if project.id %}/projects/{{ project.id }}/roadmap/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'roadmap' %}active{% endif %}">
+        <a href="{% url 'dashboard:roadmap' %}" class="nav-item {% if active_tab == 'roadmap' or request.resolver_match.url_name == 'roadmap' %}active{% endif %}">
           <i data-lucide="map" style="width:18px;height:18px;"></i>
           <span>Roadmap</span>
         </a>
-        <a href="{% if project.id %}/projects/{{ project.id }}/reports/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'reports' %}active{% endif %}">
+        <a href="{% url 'dashboard:reports' %}" class="nav-item {% if active_tab == 'reports' or request.resolver_match.url_name == 'reports' %}active{% endif %}">
           <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i>
           <span>Reports</span>
         </a>
 
-        <span class="menu-label">COLLABORATION</span>
-        <a href="{% url 'notifications:team_chat' %}" class="nav-item {% if request.resolver_match.url_name == 'team_chat' or request.resolver_match.url_name == 'room_chat' %}active{% endif %}">
-          <i data-lucide="message-square" style="width:18px;height:18px;"></i>
-          <span>Team Chat</span>
-        </a>
-        <a href="{% if project.id %}/projects/{{ project.id }}/team/{% else %}{% url 'projects:list' %}{% endif %}" class="nav-item {% if active_tab == 'team' %}active{% endif %}">
+        <span class="menu-label" style="margin-top:14px;">COLLABORATION</span>
+        <a href="{% url 'dashboard:team' %}" class="nav-item {% if active_tab == 'team' or request.resolver_match.url_name == 'team' %}active{% endif %}">
           <i data-lucide="users" style="width:18px;height:18px;"></i>
           <span>Team</span>
         </a>
@@ -144,7 +753,7 @@
           {% endif %}
         </a>
 
-        <span class="menu-label">PERSONAL</span>
+        <span class="menu-label" style="margin-top:14px;">PERSONAL</span>
         <a href="{% url 'accounts:profile' %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
           <i data-lucide="user" style="width:18px;height:18px;"></i>
           <span>Profile</span>
@@ -155,230 +764,213 @@
         </a>
       </div>
 
-      <!-- Sidebar Footer: Generic Business-Safe Status -->
+      <!-- Sidebar Footer: System Status -->
       <div class="sidebar-footer">
-        <div class="system-status-pill">
-          <div class="status-indicator-dot"></div>
-          <div class="status-content">
-            <span class="status-title">Platform Status</span>
-            <span class="status-desc">Operational</span>
+        <div class="system-status-card" id="systemStatusWidget" onclick="SprintlyApp.toggleStatusPopover(event)" title="Click to view real-time platform telemetry">
+          <div class="status-card-header">
+            <div class="status-left">
+              <span class="status-indicator-dot"></span>
+              <span class="status-title">Platform Status</span>
+            </div>
+            <span class="status-badge">Operational</span>
+          </div>
+
+          <div class="status-micro-bar">
+            <span class="status-latency"><i data-lucide="activity" style="width:11px;height:11px;"></i> 99.98% Uptime</span>
+            <span class="status-version">v2.4 Core</span>
+          </div>
+        </div>
+
+        <!-- Interactive Real-time Telemetry Popover -->
+        <div id="systemStatusPopover" class="system-status-popover">
+          <div class="status-popover-header">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="status-indicator-dot"></span>
+              <span style="font-weight:700;font-size:0.78rem;color:var(--text-primary);">All Systems Operational</span>
+            </div>
+            <button type="button" class="btn-icon" style="width:20px;height:20px;padding:0;background:transparent;border:none;cursor:pointer;" onclick="event.stopPropagation(); SprintlyApp.toggleStatusPopover(event);">
+              <i data-lucide="x" style="width:12px;height:12px;"></i>
+            </button>
+          </div>
+          <div class="status-service-list">
+            <div class="status-service-item">
+              <span>Agile Core Engine</span>
+              <span class="status-tag online">Operational</span>
+            </div>
+            <div class="status-service-item">
+              <span>AI Copilot (Groq Llama 3)</span>
+              <span class="status-tag online">Ready</span>
+            </div>
+            <div class="status-service-item">
+              <span>MongoDB Audit Sync</span>
+              <span class="status-tag online">Connected</span>
+            </div>
+            <div class="status-service-item">
+              <span>Kanban Live Board</span>
+              <span class="status-tag online">Active</span>
+            </div>
           </div>
         </div>
       </div>
     </aside>
 
-    <!-- Main View Content Area -->
+    <!-- Main Workspace Content Area -->
     <main class="sprintly-main">
-      <!-- Django Flash Messages -->
-      {% if messages %}
-        <div class="messages-container">
-          {% for message in messages %}
-            <div class="alert-message alert-{{ message.tags }}">
-              <i data-lucide="info" style="width:16px;height:16px;"></i>
-              <span>{{ message }}</span>
-              <button class="alert-close-btn" onclick="this.parentElement.remove();">×</button>
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-
       {% block content %}
       {% endblock %}
     </main>
   </div>
 
-  <!-- ========================================== -->
-  <!-- MODALS                                     -->
-  <!-- ========================================== -->
+  <!-- Global Command Palette Modal (Ctrl+K) -->
+  <div id="commandPaletteModal" class="modal-overlay" onclick="if(event.target===this) SprintlyApp.closeCommandPalette()">
+    <div class="command-palette-card">
+      <div class="palette-search-box">
+        <i data-lucide="search" style="width:18px;height:18px;color:var(--text-muted);"></i>
+        <input type="text" id="paletteSearchInput" class="palette-input" placeholder="Type a command or search issues, sprints, projects..." oninput="SprintlyApp.handlePaletteSearch(this.value)">
+        <kbd class="kbd-shortcut">ESC to close</kbd>
+      </div>
+      <div id="paletteResultsList" class="palette-results">
+        <div class="palette-section-title">QUICK ACTIONS</div>
+        <div class="palette-item" onclick="SprintlyApp.openCreateIssueModal(); SprintlyApp.closeCommandPalette();">
+          <i data-lucide="plus-circle" style="width:16px;height:16px;color:var(--accent-primary);"></i>
+          <span>Create New Issue</span>
+          <span class="palette-item-tag">Issue</span>
+        </div>
+        <div class="palette-item" onclick="window.location.href='{% url 'projects:list' %}';">
+          <i data-lucide="folder-plus" style="width:16px;height:16px;color:#0284c7;"></i>
+          <span>Create / Browse Projects</span>
+          <span class="palette-item-tag">Project</span>
+        </div>
+        <div class="palette-item" onclick="SprintlyAI.toggleDrawer(); SprintlyApp.closeCommandPalette();">
+          <i data-lucide="sparkles" style="width:16px;height:16px;color:#a855f7;"></i>
+          <span>Ask Sprintly AI Assistant</span>
+          <span class="palette-item-tag">AI</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <!-- 1. Create Issue Modal -->
-  <div id="createIssueModal" class="modal-overlay">
+  <!-- Global Quick Create Issue Modal -->
+  <div id="globalCreateIssueModal" class="modal-overlay" onclick="if(event.target===this) SprintlyApp.closeAllModals()">
     <div class="modal-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-        <h2 style="font-size:1.25rem;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
-          <i data-lucide="plus-circle" style="width:20px;height:20px;color:var(--accent-primary);"></i>
-          <span>Create Issue</span>
-        </h2>
+        <h2 style="font-size:1.25rem;font-weight:700;color:var(--text-primary);">Create Issue</h2>
         <button class="btn-icon" onclick="SprintlyApp.closeAllModals()"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
       </div>
-
-      <form onsubmit="SprintlyApp.submitCreateIssue(event)">
-        <div class="form-group">
-          <label class="form-label">Issue Title *</label>
-          <input type="text" id="createTitle" class="form-control" placeholder="e.g. Implement real-time team workload matrix" required>
+      <form id="globalCreateIssueForm" onsubmit="SprintlyApp.submitCreateIssue(event)">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:block;">Project</label>
+          <select id="modalIssueProject" class="form-control" style="width:100%;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);">
+            {% for p in all_projects %}
+              <option value="{{ p.id }}">{{ p.key }} - {{ p.name }}</option>
+            {% endfor %}
+          </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Description</label>
-          <textarea id="createDesc" class="form-control" rows="3" placeholder="Provide background context and acceptance criteria..."></textarea>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:block;">Title *</label>
+          <input type="text" id="modalIssueTitle" class="form-control" placeholder="Issue summary / feature title..." required style="width:100%;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);">
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:-4px;margin-bottom:14px;">
-          <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;border-color:rgba(79,70,229,0.3);color:var(--accent-primary);" onclick="SprintlyApp.improveIssueWithAI()">
-            <i data-lucide="sparkles" style="width:13px;height:13px;"></i> Improve with AI
-          </button>
-          <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;" onclick="SprintlyApp.findSimilarIssuesWithAI()">
-            <i data-lucide="copy" style="width:13px;height:13px;"></i> Find Similar
-          </button>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label class="form-label">Project</label>
-            <select id="createProject" class="form-control">
-              {% for p in all_projects %}
-                <option value="{{ p.id }}" {% if p.id == project.id %}selected{% endif %}>{{ p.key }} - {{ p.name }}</option>
-              {% empty %}
-                <option value="" disabled selected>No projects available — create a project first</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Issue Type</label>
-            <select id="createType" class="form-control">
-              <option value="STORY">Story</option>
-              <option value="TASK" selected>Task</option>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <label class="form-label" style="font-size:0.75rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:block;">Type</label>
+            <select id="modalIssueType" class="form-control" style="width:100%;padding:6px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);">
+              <option value="TASK">Task</option>
               <option value="BUG">Bug</option>
+              <option value="STORY">Story</option>
               <option value="EPIC">Epic</option>
               <option value="IMPROVEMENT">Improvement</option>
             </select>
           </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-          <div class="form-group">
-            <label class="form-label">Priority</label>
-            <select id="createPriority" class="form-control">
+          <div>
+            <label class="form-label" style="font-size:0.75rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:block;">Priority</label>
+            <select id="modalIssuePriority" class="form-control" style="width:100%;padding:6px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);">
               <option value="LOW">Low</option>
               <option value="MEDIUM" selected>Medium</option>
               <option value="HIGH">High</option>
               <option value="CRITICAL">Critical</option>
             </select>
           </div>
-
-          <div class="form-group">
-            <label class="form-label">Story Points</label>
-            <input type="number" id="createPoints" class="form-control" value="3" min="1" max="21">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Due Date</label>
-            <input type="date" id="createDueDate" class="form-control">
+          <div>
+            <label class="form-label" style="font-size:0.75rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:block;">Points</label>
+            <input type="number" id="modalIssuePoints" class="form-control" value="3" min="0" max="100" style="width:100%;padding:6px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);">
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Labels (comma-separated)</label>
-          <input type="text" id="createLabels" class="form-control" placeholder="frontend, ui, core-feature">
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:4px;display:block;">Description</label>
+          <textarea id="modalIssueDesc" class="form-control" rows="3" placeholder="Add technical specification or description..." style="width:100%;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border-medium);border-radius:var(--radius-md);color:var(--text-primary);"></textarea>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+        <div style="display:flex;justify-content:flex-end;gap:10px;">
           <button type="button" class="btn-secondary" onclick="SprintlyApp.closeAllModals()">Cancel</button>
-          <button type="submit" class="btn-primary">Create Ticket</button>
+          <button type="submit" class="btn-primary">Create Issue</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- 2. Global Command Palette Modal (Ctrl+K) -->
-  <div id="commandPaletteModal" class="modal-overlay">
-    <div class="modal-card" style="max-width:550px;padding:20px;">
-      <div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-subtle);padding-bottom:12px;">
-        <i data-lucide="search" style="width:20px;height:20px;color:var(--text-muted);"></i>
-        <input type="text" id="commandPaletteInput" class="form-control" placeholder="Search issues, projects, sprints (or jump to page)..." style="border:none;background:transparent;padding:0;font-size:1rem;" oninput="SprintlyApp.handleGlobalSearch(this.value)">
+  <!-- Sprintly AI Overlay -->
+  <div id="aiDrawerOverlay" class="ai-drawer-overlay" onclick="SprintlyAI.closeDrawer()"></div>
+
+  <!-- Sprintly AI Floating Button & Side Drawer -->
+  <button class="ai-floating-btn" onclick="SprintlyAI.toggleDrawer()" title="Open Sprintly AI Assistant">
+    <i data-lucide="sparkles" style="width:18px;height:18px;"></i>
+    <span>Ask Sprintly AI</span>
+  </button>
+
+  <div id="sprintlyAiDrawer" class="ai-drawer">
+    <div class="ai-drawer-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="brand-icon" style="width:28px;height:28px;background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
+          <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
+        </div>
+        <div>
+          <h3 style="font-size:1.02rem;font-weight:800;color:var(--text-primary);margin:0;line-height:1.2;">Sprintly AI</h3>
+          <div id="aiContextChip" style="font-size:0.72rem;color:var(--text-muted);display:flex;align-items:center;gap:4px;"></div>
+        </div>
       </div>
-      <div id="commandSearchResults" style="margin-top:14px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
-        <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin:4px 0;">Quick Navigation</div>
-        <a href="{% url 'dashboard:home' %}" class="nav-item">
-          <i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Go to Dashboard
-        </a>
-        <a href="{% url 'dashboard:my_work' %}" class="nav-item">
-          <i data-lucide="check-square" style="width:16px;height:16px;"></i> View My Work
-        </a>
-        <a href="{% url 'projects:list' %}" class="nav-item">
-          <i data-lucide="folder" style="width:16px;height:16px;"></i> Browse Projects
-        </a>
-        <a href="/projects/{{ project.id|default:1 }}/board/" class="nav-item">
-          <i data-lucide="trello" style="width:16px;height:16px;"></i> Open Active Kanban Board
-        </a>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button class="btn-icon" onclick="SprintlyAI.clearChat()" title="Clear Chat"><i data-lucide="trash-2" style="width:15px;height:15px;"></i></button>
+        <button class="btn-icon" onclick="SprintlyAI.toggleDrawer()" title="Close Drawer"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+      </div>
+    </div>
+
+    <!-- Contextual Quick Action Suggestions -->
+    <div id="aiSuggestionPills" class="ai-suggestion-pills"></div>
+
+    <div id="aiChatThread" class="ai-drawer-body">
+      <div class="ai-msg-row">
+        <div class="ai-avatar-badge"><i data-lucide="sparkles" style="width:14px;height:14px;"></i></div>
+        <div class="ai-msg-bubble bot">
+          👋 Hello! I am your <strong>Sprintly AI</strong> Assistant. Ask me to draft sprint plans, estimate story points, identify delivery risks, or summarize team progress.
+        </div>
+      </div>
+    </div>
+
+    <div class="ai-drawer-footer">
+      <div class="ai-input-wrapper">
+        <textarea id="aiChatInput" class="ai-chat-input" placeholder="Ask AI a question or request sprint plan..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();SprintlyAI.handleSendMessage();}"></textarea>
+        <button id="aiSendBtn" class="ai-send-btn" onclick="SprintlyAI.handleSendMessage()" title="Send Message"><i data-lucide="send" style="width:14px;height:14px;"></i></button>
       </div>
     </div>
   </div>
 
-  <!-- 3. Floating Sprintly AI Assistant Button -->
-  <button id="sprintlyAiFloatingBtn" class="ai-floating-btn" onclick="SprintlyAI.toggleDrawer()" title="Ask Sprintly AI">
-    <div class="ai-sparkle-icon"><i data-lucide="sparkles" style="width:16px;height:16px;"></i></div>
-    <span>Ask Sprintly AI</span>
-  </button>
+  <!-- Global CSRF Form -->
+  <form id="globalCsrfForm" style="display:none;">{% csrf_token %}</form>
 
-  <!-- 4. Sprintly AI Slide-Over Drawer Overlay & Panel -->
-  <div id="aiDrawerOverlay" class="ai-drawer-overlay" onclick="SprintlyAI.closeDrawer()"></div>
-  <aside id="sprintlyAiDrawer" class="ai-drawer">
-    <!-- Header -->
-    <div class="ai-drawer-header">
-      <div class="ai-drawer-title-group">
-        <div class="ai-avatar-badge">
-          <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
-        </div>
-        <div>
-          <div class="ai-drawer-title">Sprintly AI</div>
-          <div class="ai-drawer-subtitle">Agile Intelligence & Decision Support</div>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <button class="btn-icon" onclick="SprintlyAI.clearChat()" title="Clear Chat">
-          <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
-        </button>
-        <button class="btn-icon" onclick="SprintlyAI.closeDrawer()" title="Close Drawer">
-          <i data-lucide="x" style="width:18px;height:18px;"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- Active Context Indicator -->
-    <div class="ai-context-banner">
-      <span style="color:var(--text-muted);font-weight:600;">ACTIVE CONTEXT:</span>
-      <div id="aiContextChip" class="ai-context-chip">
-        <i data-lucide="compass" style="width:14px;height:14px;"></i>
-        <span>Workspace Overview</span>
-      </div>
-    </div>
-
-    <!-- Contextual Suggestion Pills -->
-    <div class="ai-suggestions-container">
-      <span class="ai-suggestions-label">Suggested Actions</span>
-      <div id="aiSuggestionPills" class="ai-suggestions-pills">
-        <!-- Injected dynamically by SprintlyAI.renderSuggestions() -->
-      </div>
-    </div>
-
-    <!-- Messages Conversation Feed -->
-    <div id="aiChatThread" class="ai-chat-thread">
-      <div class="ai-msg-row">
-        <div class="ai-avatar-badge" style="width:28px;height:28px;font-size:0.75rem;"><i data-lucide="sparkles" style="width:14px;height:14px;"></i></div>
-        <div class="ai-msg-bubble bot">
-          Hello! I am <strong>Sprintly AI</strong>. I analyze your project data, plan sprints, identify delivery risks, improve issues, and answer questions. How can I help you today?
-        </div>
-      </div>
-    </div>
-
-    <!-- Chat Prompt Input Bar -->
-    <div class="ai-drawer-footer">
-      <div class="ai-input-wrapper">
-        <textarea id="aiChatInput" class="ai-chat-input" rows="1" placeholder="Ask Sprintly AI anything about your project..."></textarea>
-        <button class="ai-send-btn" onclick="SprintlyAI.handleSendMessage()" title="Send">
-          <i data-lucide="send" style="width:14px;height:14px;"></i>
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <script src="{% static 'js/sprintly.js' %}"></script>
+  <!-- Global Application Scripts -->
+  <script src="{% static 'js/sprintly.js' %}?v={% now 'U' %}"></script>
   <script>
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+      if (window.SprintlyApp) {
+        SprintlyApp.init();
+      }
+    });
   </script>
 </body>
 </html>

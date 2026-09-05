@@ -2,6 +2,7 @@ import json
 from datetime import date, timedelta
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
+from django.db.models import Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,7 +17,7 @@ from mongodb_engine.manager import mongo_manager
 def get_current_user(request):
     if request.user.is_authenticated:
         return request.user
-    return User.objects.first()
+    return None
 
 class AIChatAPI(APIView):
     permission_classes = [AllowAny]
@@ -39,10 +40,19 @@ class AISprintPlannerAPI(APIView):
     def post(self, request):
         user = get_current_user(request)
         project_id = request.data.get("project_id")
-        project = Project.objects.filter(pk=project_id).first() if project_id else Project.objects.filter(is_archived=False).first()
+        
+        if user:
+            user_projects = Project.objects.filter(
+                Q(owner=user) | Q(memberships__user=user),
+                is_archived=False
+            ).distinct()
+        else:
+            user_projects = Project.objects.filter(is_archived=False)
+
+        project = user_projects.filter(pk=project_id).first() if project_id else user_projects.first()
 
         if not project:
-            return Response({"error": "No accessible project found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "No accessible project found. Please create a project first."}, status=status.HTTP_404_NOT_FOUND)
 
         capacity = request.data.get("capacity")
         result = sprintly_ai.plan_sprint(project, user, target_capacity=int(capacity) if capacity else None)
@@ -55,7 +65,20 @@ class AISprintRiskAPI(APIView):
     def post(self, request):
         user = get_current_user(request)
         sprint_id = request.data.get("sprint_id")
-        sprint = Sprint.objects.filter(pk=sprint_id).first() if sprint_id else Sprint.objects.filter(status="ACTIVE").first()
+        project_id = request.data.get("project_id")
+        
+        user_projects = Project.objects.filter(
+            Q(owner=user) | Q(memberships__user=user),
+            is_archived=False
+        ).distinct() if user else Project.objects.none()
+
+        if sprint_id:
+            sprint = Sprint.objects.filter(project__in=user_projects, pk=sprint_id).first()
+        elif project_id:
+            proj = user_projects.filter(pk=project_id).first()
+            sprint = proj.sprints.filter(status="ACTIVE").first() or (proj.sprints.first() if proj else None)
+        else:
+            sprint = Sprint.objects.filter(project__in=user_projects, status="ACTIVE").first()
 
         if not sprint:
             return Response({
@@ -141,7 +164,13 @@ class AIFindSimilarAPI(APIView):
         user = get_current_user(request)
         title = request.data.get("title", "").strip()
         project_id = request.data.get("project_id")
-        project = Project.objects.filter(pk=project_id).first() if project_id else Project.objects.filter(is_archived=False).first()
+        
+        user_projects = Project.objects.filter(
+            Q(owner=user) | Q(memberships__user=user),
+            is_archived=False
+        ).distinct() if user else Project.objects.none()
+
+        project = user_projects.filter(pk=project_id).first() if project_id else user_projects.first()
 
         if not project or not title:
             return Response({"similar_issues": []})
@@ -157,10 +186,19 @@ class AIProjectSummaryAPI(APIView):
     def post(self, request):
         user = get_current_user(request)
         project_id = request.data.get("project_id")
-        project = Project.objects.filter(pk=project_id).first() if project_id else Project.objects.filter(is_archived=False).first()
+        
+        if user:
+            user_projects = Project.objects.filter(
+                Q(owner=user) | Q(memberships__user=user),
+                is_archived=False
+            ).distinct()
+        else:
+            user_projects = Project.objects.filter(is_archived=False)
+
+        project = user_projects.filter(pk=project_id).first() if project_id else user_projects.first()
 
         if not project:
-            return Response({"error": "No project found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "No accessible project found."}, status=status.HTTP_404_NOT_FOUND)
 
         result = sprintly_ai.summarize_project(project, user)
         return Response(result)
@@ -171,6 +209,8 @@ class AIStandupGeneratorAPI(APIView):
 
     def post(self, request):
         user = get_current_user(request)
+        if not user:
+            return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
         result = sprintly_ai.generate_standup(user)
         return Response(result)
 
@@ -180,14 +220,13 @@ class AIDailyWorkAPI(APIView):
 
     def post(self, request):
         user = get_current_user(request)
+        if not user:
+            return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
         recs = sprintly_ai.recommend_daily_work(user)
         return Response({"success": True, "recommendations": recs})
 
 
 class AIApplyActionAPI(APIView):
-    """
-    Safely executes user-confirmed AI operations.
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -200,59 +239,24 @@ class AIApplyActionAPI(APIView):
             issue_ids = payload.get("issue_ids", [])
             sprint_id = payload.get("sprint_id")
             project_id = payload.get("project_id")
-            sprint = Sprint.objects.filter(pk=sprint_id).first() if sprint_id else None
+            
+            if user:
+                user_projects = Project.objects.filter(
+                    Q(owner=user) | Q(memberships__user=user),
+                    is_archived=False
+                ).distinct()
+            else:
+                user_projects = Project.objects.filter(is_archived=False)
+
+            sprint = Sprint.objects.filter(project__in=user_projects, pk=sprint_id).first() if sprint_id else None
             
             if not sprint and project_id:
-                proj = Project.objects.filter(pk=project_id).first()
+                proj = user_projects.filter(pk=project_id).first()
                 if proj:
                     sprint = proj.sprints.filter(status__in=["ACTIVE", "PLANNING"]).first()
-                    if not sprint:
-                        next_num = (proj.sprints.count() or 0) + 1
-                        sprint = Sprint.objects.create(
-                            project=proj,
-                            name=f"Sprint {next_num}",
-                            sprint_number=next_num,
-                            status="PLANNING",
-                            goal="AI Recommended Sprint Plan",
-                            start_date=date.today(),
-                            end_date=date.today() + timedelta(days=14)
-                        )
 
-            if not sprint and issue_ids:
-                first_issue = Issue.objects.filter(pk=issue_ids[0]).first()
-                if first_issue:
-                    sprint = first_issue.project.sprints.filter(status__in=["ACTIVE", "PLANNING"]).first()
-                    if not sprint:
-                        next_num = (first_issue.project.sprints.count() or 0) + 1
-                        sprint = Sprint.objects.create(
-                            project=first_issue.project,
-                            name=f"Sprint {next_num}",
-                            sprint_number=next_num,
-                            status="PLANNING",
-                            goal="AI Recommended Sprint Plan",
-                            start_date=date.today(),
-                            end_date=date.today() + timedelta(days=14)
-                        )
-
-            if not sprint:
-                proj = Project.objects.filter(is_archived=False).first()
-                if proj:
-                    sprint = proj.sprints.filter(status__in=["ACTIVE", "PLANNING"]).first()
-                    if not sprint:
-                        sprint = Sprint.objects.create(
-                            project=proj,
-                            name="Sprint 1",
-                            sprint_number=1,
-                            status="PLANNING",
-                            goal="AI Recommended Sprint Plan",
-                            start_date=date.today(),
-                            end_date=date.today() + timedelta(days=14)
-                        )
-                    if not issue_ids:
-                        issue_ids = list(proj.issues.filter(sprint__isnull=True).values_list("id", flat=True)[:5])
-
-            if sprint:
-                count = Issue.objects.filter(id__in=issue_ids).update(sprint=sprint)
+            if sprint and issue_ids:
+                count = Issue.objects.filter(project=sprint.project, id__in=issue_ids).update(sprint=sprint)
                 for issue in Issue.objects.filter(id__in=issue_ids):
                     try:
                         log = IssueAuditLog.objects.create(issue=issue, actor=user or sprint.project.owner, action=f"Assigned to {sprint.name} via AI Plan")
@@ -267,7 +271,7 @@ class AIApplyActionAPI(APIView):
                 except Exception:
                     pass
                 return Response({"success": True, "message": f"Successfully applied sprint plan: Added {count} issue(s) to {sprint.name}."})
-            return Response({"error": "Target project or sprint not found."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Target accessible project or sprint not found."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 2. Apply Subtasks Creation
         elif action_type == "CREATE_SUBTASKS":
@@ -282,8 +286,11 @@ class AIApplyActionAPI(APIView):
                     created_count += 1
 
             log = IssueAuditLog.objects.create(issue=issue, actor=user, action=f"Created {created_count} subtasks via AI")
-            mongo_manager.sync_issue(issue)
-            mongo_manager.sync_audit_log(log)
+            try:
+                mongo_manager.sync_issue(issue)
+                mongo_manager.sync_audit_log(log)
+            except Exception:
+                pass
             return Response({"success": True, "message": f"Created {created_count} subtasks for {issue.key}."})
 
         # 3. Apply Priority Change
@@ -296,8 +303,11 @@ class AIApplyActionAPI(APIView):
             issue.save()
 
             log = IssueAuditLog.objects.create(issue=issue, actor=user, action="Updated priority via AI", previous_value=old_p, new_value=new_priority)
-            mongo_manager.sync_issue(issue)
-            mongo_manager.sync_audit_log(log)
+            try:
+                mongo_manager.sync_issue(issue)
+                mongo_manager.sync_audit_log(log)
+            except Exception:
+                pass
             return Response({"success": True, "message": f"Updated {issue.key} priority to {new_priority}."})
 
         # 4. Apply Story Points
@@ -342,25 +352,24 @@ class AIApplyActionAPI(APIView):
 
 
 class AIAllocateWorkAPI(APIView):
-    """
-    Intelligently balances workload and suggests teammate assignments.
-    """
     permission_classes = [AllowAny]
 
     def post(self, request):
         user = get_current_user(request)
         project_id = request.data.get("project_id")
-        project = None
-        if project_id:
-            try:
-                project = Project.objects.filter(pk=int(project_id)).first()
-            except (ValueError, TypeError):
-                project = None
-        if not project:
-            project = Project.objects.filter(is_archived=False).first()
+        
+        if user:
+            user_projects = Project.objects.filter(
+                Q(owner=user) | Q(memberships__user=user),
+                is_archived=False
+            ).distinct()
+        else:
+            user_projects = Project.objects.filter(is_archived=False)
+
+        project = user_projects.filter(pk=project_id).first() if project_id else user_projects.first()
 
         if not project:
-            return Response({"error": "No project found."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No accessible project found."}, status=status.HTTP_400_BAD_REQUEST)
 
         result = sprintly_ai.allocate_team_work(project, user)
         return Response(result)

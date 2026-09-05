@@ -142,7 +142,7 @@ class EnterpriseSecurityMiddleware:
         response["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         response["Content-Security-Policy"] = (
             "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://fonts.googleapis.com https://fonts.gstatic.com; "
-            "img-src 'self' data: https:; "
+            "img-src 'self' data: blob: https:; "
             "font-src 'self' data: https://fonts.gstatic.com; "
             "connect-src 'self' ws://127.0.0.1:8000 http://127.0.0.1:8000 https://api.groq.com;"
         )

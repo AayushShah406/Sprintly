@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tab_config.title }} | Sprintly{% endblock %}
+
+{% block content %}
+<div class="project-workspace-container" style="max-width: 1100px;">
+  
+  <!-- Empty Workspace Feature Hero -->
+  <div class="empty-workspace-hero">
+    <div class="empty-workspace-icon">
+      <i data-lucide="{{ tab_config.icon }}" style="width:32px;height:32px;"></i>
+    </div>
+    
+    <h1 style="font-size:1.75rem;font-weight:800;color:var(--text-primary);margin-bottom:8px;">{{ tab_config.title }}</h1>
+    <p style="font-size:0.95rem;color:var(--text-secondary);max-width:540px;margin:0 auto 28px;line-height:1.6;">
+      {{ tab_config.desc }}
+    </p>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
+      <a href="{% url 'projects:list' %}" class="btn-primary" style="padding:11px 22px;font-size:0.92rem;">
+        <i data-lucide="folder-plus" style="width:18px;height:18px;"></i>
+        <span>Create Your First Project</span>
+      </a>
+      <a href="{% url 'dashboard:home' %}" class="btn-secondary" style="padding:11px 20px;font-size:0.92rem;">
+        <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
+        <span>Back to Dashboard</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Interactive Starter Templates -->
+  <div style="margin-top:40px;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-primary);margin-bottom:4px;">Quick Starter Project Templates</h3>
+      <p style="font-size:0.85rem;color:var(--text-muted);">Launch a pre-configured agile workspace with sample backlog items, sprints, and kanban cards in seconds.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:20px;">
+      
+      <!-- Template 1 -->
+      <div class="dash-card" style="display:flex;flex-direction:column;justify-content:space-between;border-top:3px solid #4f46e5;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <div class="avatar-circle" style="background:#4f46e5;width:36px;height:36px;font-size:0.9rem;border-radius:10px;">API</div>
+            <div>
+              <h4 style="font-size:1rem;font-weight:700;color:var(--text-primary);">Core Platform API</h4>
+              <span style="font-size:0.75rem;color:var(--text-muted);">Backend & Microservices</span>
+            </div>
+          </div>
+          <p style="font-size:0.84rem;color:var(--text-secondary);line-height:1.5;margin-bottom:16px;">
+            Pre-loaded with OAuth2 security stories, REST/GraphQL endpoint tasks, and database migration issues.
+          </p>
+        </div>
+        <form method="POST" action="{% url 'projects:list' %}">
+          {% csrf_token %}
+          <input type="hidden" name="name" value="Core Platform API">
+          <input type="hidden" name="key" value="API">
+          <input type="hidden" name="category" value="Software Engineering">
+          <input type="hidden" name="description" value="High-throughput scalable backend platform and API gateway.">
+          <input type="hidden" name="avatar_color" value="#4f46e5">
+          <button type="submit" class="btn-secondary" style="width:100%;justify-content:center;font-size:0.84rem;">
+            <span>Use Template</span> <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- Template 2 -->
+      <div class="dash-card" style="display:flex;flex-direction:column;justify-content:space-between;border-top:3px solid #0284c7;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <div class="avatar-circle" style="background:#0284c7;width:36px;height:36px;font-size:0.9rem;border-radius:10px;">WEB</div>
+            <div>
+              <h4 style="font-size:1rem;font-weight:700;color:var(--text-primary);">Frontend Web App</h4>
+              <span style="font-size:0.75rem;color:var(--text-muted);">Design & SPA Client</span>
+            </div>
+          </div>
+          <p style="font-size:0.84rem;color:var(--text-secondary);line-height:1.5;margin-bottom:16px;">
+            Pre-loaded with design system components, state management, and accessibility audit tickets.
+          </p>
+        </div>
+        <form method="POST" action="{% url 'projects:list' %}">
+          {% csrf_token %}
+          <input type="hidden" name="name" value="Frontend Web App">
+          <input type="hidden" name="key" value="WEB">
+          <input type="hidden" name="category" value="Web Development">
+          <input type="hidden" name="description" value="Modern responsive React/Vue single-page application.">
+          <input type="hidden" name="avatar_color" value="#0284c7">
+          <button type="submit" class="btn-secondary" style="width:100%;justify-content:center;font-size:0.84rem;">
+            <span>Use Template</span> <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- Template 3 -->
+      <div class="dash-card" style="display:flex;flex-direction:column;justify-content:space-between;border-top:3px solid #10b981;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <div class="avatar-circle" style="background:#10b981;width:36px;height:36px;font-size:0.9rem;border-radius:10px;">MOB</div>
+            <div>
+              <h4 style="font-size:1rem;font-weight:700;color:var(--text-primary);">Mobile App Suite</h4>
+              <span style="font-size:0.75rem;color:var(--text-muted);">iOS & Android</span>
+            </div>
+          </div>
+          <p style="font-size:0.84rem;color:var(--text-secondary);line-height:1.5;margin-bottom:16px;">
+            Pre-loaded with push notification pipelines, biometric auth, and offline synchronization tasks.
+          </p>
+        </div>
+        <form method="POST" action="{% url 'projects:list' %}">
+          {% csrf_token %}
+          <input type="hidden" name="name" value="Mobile App Suite">
+          <input type="hidden" name="key" value="MOB">
+          <input type="hidden" name="category" value="Mobile Engineering">
+          <input type="hidden" name="description" value="Cross-platform iOS and Android mobile client.">
+          <input type="hidden" name="avatar_color" value="#10b981">
+          <button type="submit" class="btn-secondary" style="width:100%;justify-content:center;font-size:0.84rem;">
+            <span>Use Template</span> <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

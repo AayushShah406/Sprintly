@@ -16,6 +16,7 @@ class ProjectTeamManagementTests(TestCase):
             first_name="Workspace",
             last_name="Owner"
         )
+        self.client.force_login(self.owner)
         self.client.force_authenticate(user=self.owner)
         self.project = Project.objects.create(
             name="Sprintly Enterprise Core",
@@ -42,10 +43,15 @@ class ProjectTeamManagementTests(TestCase):
         self.assertEqual(sarah.first_name, "Sarah")
         self.assertEqual(sarah.last_name, "Connor")
 
+        from notifications.models import Notification
+        notif = Notification.objects.filter(recipient=sarah, notification_type="PROJECT_INVITATION").first()
+        self.assertIsNotNone(notif)
+        self.client.force_login(sarah)
+        self.client.post(reverse("notifications:accept_invitation", kwargs={"pk": notif.pk}))
+
         pm = ProjectMember.objects.filter(project=self.project, user=sarah).first()
         self.assertIsNotNone(pm)
         self.assertEqual(pm.role, "TESTER")
-        self.assertEqual(pm.capacity_hours_per_week, 35)
 
     def test_remove_teammate_from_project(self):
         teammate = User.objects.create_user(

@@ -2,149 +2,219 @@
 
 {% block title %}{{ issue.key }} - {{ issue.title }} | Sprintly{% endblock %}
 
+{% block extra_css %}
+<style>
+  .subtask-title-text {
+    transition: color 0.15s ease;
+  }
+  .subtask-title-text.completed {
+    text-decoration: line-through;
+    color: var(--text-muted);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="issue-detail-layout">
   
   <!-- Main Left Content (Description, Subtasks, Comments, Attachments, Links) -->
   <div class="issue-main-content">
     
-    <!-- Header Breadcrumb & Actions -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--text-muted);">
-        <a href="{% url 'projects:detail' issue.project.id %}" style="color:var(--text-secondary);text-decoration:none;font-weight:700;">{{ issue.project.key }}</a>
+    <!-- Header Breadcrumb & Actions Bar -->
+    <div class="issue-header-bar">
+      <div class="issue-breadcrumb">
+        <a href="{% url 'projects:detail' issue.project.id %}">{{ issue.project.key }}</a>
         <span>/</span>
-        <span class="type-badge-pill type-{{ issue.issue_type }}">{{ issue.issue_type }}</span>
+        <span class="type-badge-pill type-{{ issue.issue_type }}">
+          {% if issue.issue_type == 'BUG' %}<i data-lucide="bug" style="width:12px;height:12px;"></i>
+          {% elif issue.issue_type == 'STORY' %}<i data-lucide="bookmark" style="width:12px;height:12px;"></i>
+          {% elif issue.issue_type == 'EPIC' %}<i data-lucide="zap" style="width:12px;height:12px;"></i>
+          {% else %}<i data-lucide="check-square" style="width:12px;height:12px;"></i>
+          {% endif %}
+          {{ issue.issue_type }}
+        </span>
         <span>/</span>
-        <span style="font-weight:800;color:var(--text-primary);">{{ issue.key }}</span>
+        <span style="font-weight:800;color:var(--text-primary);letter-spacing:0.02em;">{{ issue.key }}</span>
       </div>
 
       <div style="display:flex;align-items:center;gap:10px;">
-        <button class="btn-secondary" onclick="SprintlyApp.toggleWatchIssue({{ issue.id }})" id="watchBtn">
+        <!-- Copy Key Button -->
+        <button type="button" class="btn-icon" title="Copy Key" onclick="navigator.clipboard.writeText('{{ issue.key }}'); SprintlyApp.showToast('Copied {{ issue.key }} to clipboard!', 'info');">
+          <i data-lucide="copy" style="width:15px;height:15px;"></i>
+        </button>
+
+        <!-- Watch Button -->
+        <button type="button" class="btn-secondary" onclick="SprintlyApp.toggleWatchIssue({{ issue.id }})" id="watchBtn" style="{% if is_watching %}background:rgba(79,70,229,0.12);color:var(--accent-primary);border-color:var(--accent-primary);{% endif %}">
           <i data-lucide="eye" style="width:14px;height:14px;"></i>
           <span id="watchText">{% if is_watching %}Watching ({{ issue.watchers.count }}){% else %}Watch ({{ issue.watchers.count }}){% endif %}</span>
         </button>
-        <form method="POST" action="{% url 'issues:delete' issue.id %}" onsubmit="return confirm('Delete ticket {{ issue.key }}?');">
-          {% csrf_token %}
-          <button type="submit" class="btn-icon" style="color:#dc2626;" title="Delete Issue"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>
-        </form>
+
+        <!-- Delete Button (Triggers Modern Modal) -->
+        <button type="button" class="btn-icon btn-danger-subtle" onclick="SprintlyApp.openDeleteIssueModal()" title="Delete Issue" id="topDeleteIssueBtn">
+          <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+        </button>
       </div>
     </div>
 
-    <!-- Title -->
-    <h1 style="font-size:1.5rem;font-weight:800;color:var(--text-primary);margin-bottom:12px;">{{ issue.title }}</h1>
+    <!-- Issue Title -->
+    <div>
+      <h1 class="issue-title-heading">{{ issue.title }}</h1>
+    </div>
 
     <!-- Sprintly AI Action Toolbar -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-      <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:5px 12px;border-color:rgba(79,70,229,0.35);color:var(--accent-primary);" onclick="SprintlyAI.triggerAction('acceptance_criteria')">
-        <i data-lucide="sparkles" style="width:13px;height:13px;"></i> Generate Acceptance Criteria
-      </button>
-      <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:5px 12px;border-color:rgba(79,70,229,0.35);color:var(--accent-primary);" onclick="SprintlyAI.triggerAction('breakdown_issue')">
-        <i data-lucide="list-tree" style="width:13px;height:13px;"></i> Break Down into Subtasks
-      </button>
-      <button type="button" class="btn-secondary" style="font-size:0.8rem;padding:5px 12px;" onclick="SprintlyAI.triggerAction('suggest_priority')">
-        <i data-lucide="sparkles" style="width:13px;height:13px;"></i> Suggest Priority
-      </button>
+    <div class="ai-copilot-toolbar">
+      <div class="ai-copilot-badge">
+        <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
+        <span>Sprintly AI Copilot</span>
+      </div>
+      <div class="ai-actions-group">
+        <button type="button" class="ai-copilot-btn" onclick="SprintlyAI.triggerAction('acceptance_criteria')">
+          <i data-lucide="check-circle" style="width:13px;height:13px;color:var(--accent-primary);"></i> Acceptance Criteria
+        </button>
+        <button type="button" class="ai-copilot-btn" onclick="SprintlyAI.triggerAction('breakdown_issue')">
+          <i data-lucide="list-tree" style="width:13px;height:13px;color:var(--accent-primary);"></i> Break Down Subtasks
+        </button>
+        <button type="button" class="ai-copilot-btn" onclick="SprintlyAI.triggerAction('suggest_priority')">
+          <i data-lucide="trending-up" style="width:13px;height:13px;color:var(--accent-primary);"></i> Suggest Priority
+        </button>
+      </div>
     </div>
 
     <!-- Description Card -->
-    <div class="dash-card" style="margin-bottom:20px;">
-      <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">Description</h3>
-      <div style="font-size:0.95rem;color:var(--text-primary);line-height:1.7;white-space:pre-line;">
-        {{ issue.description|default:"No description provided." }}
+    <div class="dash-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="font-size:0.85rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin:0;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="align-left" style="width:15px;height:15px;color:var(--accent-primary);"></i> Description
+        </h3>
+        <button type="button" class="btn-secondary" style="font-size:0.75rem;padding:4px 10px;" id="toggleDescBtn" onclick="toggleDescriptionEdit()">
+          <i data-lucide="edit-3" style="width:12px;height:12px;"></i> <span id="descEditBtnLabel">Edit</span>
+        </button>
       </div>
+
+      <!-- Description Display View -->
+      <div id="descViewMode" style="font-size:0.95rem;color:var(--text-primary);line-height:1.7;white-space:pre-line;min-height:36px;">
+        {{ issue.description|default:"No description provided. Click Edit to add technical notes, user stories, or requirements." }}
+      </div>
+
+      <!-- Description Inline Editor -->
+      <form method="POST" action="{% url 'issues:edit' issue.id %}" id="descEditForm" style="display:none;margin-top:10px;">
+        {% csrf_token %}
+        <div class="form-group" style="margin-bottom:12px;">
+          <textarea name="description" class="form-control" rows="5" placeholder="Enter issue description, technical spec, or criteria..." style="width:100%;font-size:0.95rem;line-height:1.6;">{{ issue.description }}</textarea>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn-primary" style="font-size:0.85rem;padding:6px 14px;">Save Description</button>
+          <button type="button" class="btn-secondary" style="font-size:0.85rem;padding:6px 12px;" onclick="toggleDescriptionEdit()">Cancel</button>
+        </div>
+      </form>
     </div>
 
     <!-- Subtasks Section -->
-    <div class="dash-card" style="margin-bottom:20px;">
-      <div class="dash-card-header">
-        <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+    <div class="dash-card">
+      <div class="dash-card-header" style="margin-bottom:12px;">
+        <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;margin:0;">
           <i data-lucide="check-square" style="width:18px;height:18px;color:#4f46e5;"></i>
-          <span>Subtasks ({{ issue.subtasks_completed }}/{{ issue.subtasks_total }})</span>
+          <span>Subtasks <span id="subtasksCounter" style="color:var(--text-muted);font-weight:600;font-size:0.85rem;">({{ issue.subtasks_completed }}/{{ issue.subtasks_total }})</span></span>
         </h3>
-        <span style="font-size:0.8rem;color:var(--text-muted);font-weight:700;">{{ issue.subtasks_progress }}%</span>
+        <span id="subtasksPct" style="font-size:0.85rem;color:var(--accent-primary);font-weight:800;">{{ issue.subtasks_progress }}%</span>
       </div>
 
-      <div class="progress-bar-track" style="margin-bottom:14px;">
-        <div class="progress-bar-fill" style="width:{{ issue.subtasks_progress }}%;background:#10b981;"></div>
+      <div class="progress-bar-track" style="height:6px;background:var(--bg-secondary);border-radius:4px;overflow:hidden;margin-bottom:16px;">
+        <div id="subtasksProgressFill" class="progress-bar-fill" style="width:{{ issue.subtasks_progress }}%;height:100%;background:linear-gradient(90deg, #4f46e5, #10b981);border-radius:4px;transition:width 0.3s ease;"></div>
       </div>
 
-      <div class="subtask-list" style="display:flex;flex-direction:column;gap:8px;">
+      <div class="subtask-list" id="subtasksList" style="display:flex;flex-direction:column;gap:8px;">
         {% for st in issue.subtasks.all %}
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;color:var(--text-primary);">
-              <input type="checkbox" {% if st.is_completed %}checked{% endif %} onchange="SprintlyApp.toggleSubtask({{ st.id }})">
-              <span style="{% if st.is_completed %}text-decoration:line-through;color:var(--text-muted);{% endif %}">{{ st.title }}</span>
+          <div class="subtask-item {% if st.is_completed %}completed{% endif %}" id="subtask-item-{{ st.id }}">
+            <label class="subtask-check-label">
+              <input type="checkbox" {% if st.is_completed %}checked{% endif %} onchange="SprintlyApp.toggleSubtask({{ st.id }})" style="accent-color:var(--accent-primary);width:16px;height:16px;cursor:pointer;">
+              <span class="subtask-title-text {% if st.is_completed %}completed{% endif %}">{{ st.title }}</span>
             </label>
+            <button type="button" class="btn-icon" style="width:28px;height:28px;min-width:28px;color:var(--text-muted);border:none;background:transparent;" title="Remove subtask" onclick="SprintlyApp.deleteSubtask({{ st.id }})">
+              <i data-lucide="x" style="width:14px;height:14px;"></i>
+            </button>
           </div>
         {% empty %}
-          <div style="font-size:0.85rem;color:var(--text-muted);padding:8px 0;">No subtasks created yet.</div>
+          <div id="noSubtasksMsg" style="font-size:0.85rem;color:var(--text-muted);padding:14px;background:var(--bg-secondary);border-radius:var(--radius-md);text-align:center;">
+            No subtasks created yet. Break this issue down into actionable checklist items below.
+          </div>
         {% endfor %}
       </div>
 
       <!-- Add Subtask Form -->
-      <form method="POST" style="display:flex;gap:8px;margin-top:12px;">
+      <form method="POST" style="display:flex;gap:8px;margin-top:14px;">
         {% csrf_token %}
-        <input type="text" name="subtask_title" class="form-control" placeholder="Add a new subtask..." required style="flex:1;">
-        <button type="submit" class="btn-secondary">+ Add</button>
+        <input type="text" name="subtask_title" class="form-control" placeholder="Add a new subtask (e.g. Write unit test, Update schema)..." required style="flex:1;">
+        <button type="submit" class="btn-secondary" style="font-size:0.85rem;padding:7px 14px;">+ Add</button>
       </form>
     </div>
 
     <!-- Linked Issues Section -->
-    <div class="dash-card" style="margin-bottom:20px;">
-      <div class="dash-card-header">
-        <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+    <div class="dash-card">
+      <div class="dash-card-header" style="margin-bottom:14px;">
+        <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;margin:0;">
           <i data-lucide="link-2" style="width:18px;height:18px;color:#0284c7;"></i>
-          <span>Linked Issues</span>
+          <span>Linked Issues ({{ issue.outgoing_links.count }})</span>
         </h3>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:8px;">
         {% for link in issue.outgoing_links.all %}
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="badge-priority priority-MEDIUM">{{ link.get_link_type_display }}</span>
-              <a href="{% url 'issues:detail' link.target_issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;">
-                {{ link.target_issue.key }} - {{ link.target_issue.title }}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden;">
+              <span class="badge-priority priority-MEDIUM" style="font-size:0.75rem;padding:2px 8px;">{{ link.get_link_type_display }}</span>
+              <a href="{% url 'issues:detail' link.target_issue.id %}" style="font-weight:700;color:var(--text-primary);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                {{ link.target_issue.key }} — {{ link.target_issue.title }}
               </a>
             </div>
-            <span class="status-pill status-{{ link.target_issue.status }}">{{ link.target_issue.get_status_display }}</span>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <span class="status-pill status-{{ link.target_issue.status }}">{{ link.target_issue.get_status_display }}</span>
+              <form method="POST" action="{% url 'issues:link_delete' link.id %}" style="display:inline;" onsubmit="return confirm('Remove link?');">
+                {% csrf_token %}
+                <button type="submit" class="btn-icon" style="width:26px;height:26px;min-width:26px;border:none;background:transparent;color:var(--text-muted);" title="Unlink">
+                  <i data-lucide="x" style="width:13px;height:13px;"></i>
+                </button>
+              </form>
+            </div>
           </div>
         {% empty %}
-          <div style="font-size:0.85rem;color:var(--text-muted);">No linked issues.</div>
+          <div style="font-size:0.85rem;color:var(--text-muted);padding:10px 0;">No linked issues.</div>
         {% endfor %}
       </div>
 
       <!-- Link Issue Form -->
-      <form method="POST" style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+      <form method="POST" style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap;">
         {% csrf_token %}
-        <select name="link_type" class="filter-select">
+        <select name="link_type" class="filter-select" style="padding:7px 12px;">
           <option value="RELATES_TO">Relates to</option>
           <option value="BLOCKS">Blocks</option>
           <option value="IS_BLOCKED_BY">Is blocked by</option>
           <option value="DUPLICATES">Duplicates</option>
         </select>
-        <select name="target_issue_id" class="form-control" style="flex:1;">
+        <select name="target_issue_id" class="form-control" style="flex:1;min-width:200px;">
           {% for other in all_project_issues %}
-            <option value="{{ other.id }}">{{ other.key }} - {{ other.title|truncatewords:6 }}</option>
+            <option value="{{ other.id }}">{{ other.key }} — {{ other.title|truncatewords:8 }}</option>
           {% endfor %}
         </select>
-        <button type="submit" class="btn-secondary">Link</button>
+        <button type="submit" class="btn-secondary" style="font-size:0.85rem;padding:7px 14px;">Link Issue</button>
       </form>
     </div>
 
     <!-- Attachments Section -->
-    <div class="dash-card" style="margin-bottom:20px;">
-      <div class="dash-card-header">
-        <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+    <div class="dash-card">
+      <div class="dash-card-header" style="margin-bottom:14px;">
+        <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;margin:0;">
           <i data-lucide="paperclip" style="width:18px;height:18px;color:#7c3aed;"></i>
-          <span>Attachments</span>
+          <span>Attachments ({{ issue.attachments.count }})</span>
         </h3>
       </div>
 
       <div style="display:flex;flex-wrap:wrap;gap:12px;">
         {% for att in issue.attachments.all %}
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
-            <i data-lucide="file-text" style="width:16px;height:16px;color:#4f46e5;"></i>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border-subtle);">
+            <div style="width:32px;height:32px;border-radius:6px;background:rgba(79,70,229,0.12);color:var(--accent-primary);display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="file-text" style="width:16px;height:16px;"></i>
+            </div>
             <div>
               <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary);">{{ att.file_name }}</div>
               <div style="font-size:0.75rem;color:var(--text-muted);">{{ att.file_size }} • {{ att.uploaded_by.display_name }}</div>
@@ -156,24 +226,24 @@
       </div>
 
       <!-- Add Attachment Form -->
-      <form method="POST" style="display:flex;gap:8px;margin-top:12px;">
+      <form method="POST" style="display:flex;gap:8px;margin-top:14px;">
         {% csrf_token %}
-        <input type="text" name="attachment_name" class="form-control" placeholder="Attachment file name (e.g. spec_doc_v2.pdf)..." required style="flex:1;">
-        <button type="submit" class="btn-secondary">Attach</button>
+        <input type="text" name="attachment_name" class="form-control" placeholder="Attachment file name (e.g. architecture_diagram.png, api_spec.json)..." required style="flex:1;">
+        <button type="submit" class="btn-secondary" style="font-size:0.85rem;padding:7px 14px;">Attach File</button>
       </form>
     </div>
 
-    <!-- Comments Section -->
+    <!-- Comments & Activity Timeline -->
     <div class="dash-card">
-      <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+      <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
         <i data-lucide="message-square" style="width:18px;height:18px;color:#059669;"></i>
-        <span>Comments ({{ issue.comments.count }})</span>
+        <span>Comments & Discussion ({{ issue.comments.count }})</span>
       </h3>
 
-      <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:18px;">
+      <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:20px;">
         {% for c in issue.comments.all %}
-          <div style="display:flex;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--border-subtle);">
-            <div class="avatar-circle" style="background:{{ c.author.avatar_color }};width:32px;height:32px;font-size:0.8rem;">
+          <div style="display:flex;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border-subtle);">
+            <div class="avatar-circle" style="background:{{ c.author.avatar_color|default:'#4f46e5' }};width:34px;height:34px;font-size:0.82rem;flex-shrink:0;">
               {{ c.author.initials }}
             </div>
             <div style="flex:1;">
@@ -181,23 +251,25 @@
                 <span style="font-size:0.85rem;font-weight:700;color:var(--text-primary);">{{ c.author.display_name }}</span>
                 <span style="font-size:0.75rem;color:var(--text-muted);">{{ c.created_at|timesince }} ago</span>
               </div>
-              <div style="font-size:0.9rem;color:var(--text-primary);margin-top:4px;line-height:1.5;">
-                {{ c.content }}
-              </div>
+              <div style="font-size:0.9rem;color:var(--text-primary);margin-top:6px;line-height:1.6;white-space:pre-line;">{{ c.content }}</div>
             </div>
           </div>
         {% empty %}
-          <div style="font-size:0.85rem;color:var(--text-muted);">No comments yet. Start the conversation below.</div>
+          <div style="font-size:0.85rem;color:var(--text-muted);padding:12px 0;">No comments yet. Start the discussion below.</div>
         {% endfor %}
       </div>
 
       <!-- Add Comment Form -->
       <form method="POST">
         {% csrf_token %}
-        <div class="form-group">
-          <textarea name="comment_content" class="form-control" rows="3" placeholder="Add a comment... (use @name to mention team members)" required></textarea>
+        <div class="form-group" style="margin-bottom:12px;">
+          <textarea name="comment_content" class="form-control" rows="3" placeholder="Write a comment or note..." required style="width:100%;font-size:0.9rem;line-height:1.5;"></textarea>
         </div>
-        <button type="submit" class="btn-primary">Post Comment</button>
+        <div style="display:flex;justify-content:flex-end;">
+          <button type="submit" class="btn-primary" style="font-size:0.85rem;padding:7px 16px;">
+            <i data-lucide="send" style="width:13px;height:13px;"></i> Post Comment
+          </button>
+        </div>
       </form>
     </div>
 
@@ -205,76 +277,156 @@
 
   <!-- Sidebar Metadata Panel (Status, Assignee, Priority, Points, Dates) -->
   <div class="issue-sidebar-panel">
-    <div class="dash-card">
-      <h3 style="font-size:0.95rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px;">Issue Details</h3>
+    <div class="sidebar-meta-card">
+      <h3 style="font-size:0.8rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:18px;display:flex;align-items:center;gap:6px;">
+        <i data-lucide="sliders" style="width:14px;height:14px;color:var(--accent-primary);"></i> Ticket Details
+      </h3>
 
-      <form method="POST" action="{% url 'issues:edit' issue.id %}">
+      <form method="POST" action="{% url 'issues:edit' issue.id %}" id="sidebarDetailsForm">
         {% csrf_token %}
         
-        <div class="form-group">
-          <label class="form-label">Status</label>
-          <select name="status" class="form-control" onchange="this.form.submit()">
-            <option value="BACKLOG" {% if issue.status == 'BACKLOG' %}selected{% endif %}>Backlog</option>
-            <option value="TODO" {% if issue.status == 'TODO' %}selected{% endif %}>To Do</option>
-            <option value="IN_PROGRESS" {% if issue.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
-            <option value="IN_REVIEW" {% if issue.status == 'IN_REVIEW' %}selected{% endif %}>In Review</option>
-            <option value="BLOCKED" {% if issue.status == 'BLOCKED' %}selected{% endif %}>Blocked</option>
-            <option value="DONE" {% if issue.status == 'DONE' %}selected{% endif %}>Done</option>
+        <!-- Status -->
+        <div class="sidebar-field-row">
+          <label class="sidebar-field-label">Status</label>
+          <select name="status" class="form-control" onchange="this.form.submit()" style="font-weight:700;">
+            <option value="BACKLOG" {% if issue.status == 'BACKLOG' %}selected{% endif %}>⚪ Backlog</option>
+            <option value="TODO" {% if issue.status == 'TODO' %}selected{% endif %}>🔵 To Do</option>
+            <option value="IN_PROGRESS" {% if issue.status == 'IN_PROGRESS' %}selected{% endif %}>🟡 In Progress</option>
+            <option value="IN_REVIEW" {% if issue.status == 'IN_REVIEW' %}selected{% endif %}>🟣 In Review</option>
+            <option value="BLOCKED" {% if issue.status == 'BLOCKED' %}selected{% endif %}>🔴 Blocked</option>
+            <option value="DONE" {% if issue.status == 'DONE' %}selected{% endif %}>🟢 Done</option>
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Assignee</label>
+        <!-- Assignee -->
+        <div class="sidebar-field-row">
+          <label class="sidebar-field-label">Assignee</label>
           <select name="assignee_id" class="form-control" onchange="this.form.submit()">
-            <option value="">Unassigned</option>
+            <option value="">👤 Unassigned</option>
             {% for u in users %}
               <option value="{{ u.id }}" {% if issue.assignee.id == u.id %}selected{% endif %}>{{ u.display_name }}</option>
             {% endfor %}
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Priority</label>
-          <select name="priority" class="form-control" onchange="this.form.submit()">
-            <option value="LOW" {% if issue.priority == 'LOW' %}selected{% endif %}>Low</option>
-            <option value="MEDIUM" {% if issue.priority == 'MEDIUM' %}selected{% endif %}>Medium</option>
-            <option value="HIGH" {% if issue.priority == 'HIGH' %}selected{% endif %}>High</option>
-            <option value="CRITICAL" {% if issue.priority == 'CRITICAL' %}selected{% endif %}>Critical</option>
+        <!-- Priority -->
+        <div class="sidebar-field-row">
+          <label class="sidebar-field-label">Priority</label>
+          <select name="priority" class="form-control" onchange="this.form.submit()" style="font-weight:700;">
+            <option value="LOW" {% if issue.priority == 'LOW' %}selected{% endif %}>🟢 Low</option>
+            <option value="MEDIUM" {% if issue.priority == 'MEDIUM' %}selected{% endif %}>🟡 Medium</option>
+            <option value="HIGH" {% if issue.priority == 'HIGH' %}selected{% endif %}>🟠 High</option>
+            <option value="CRITICAL" {% if issue.priority == 'CRITICAL' %}selected{% endif %}>🔴 Critical</option>
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Sprint</label>
+        <!-- Sprint -->
+        <div class="sidebar-field-row">
+          <label class="sidebar-field-label">Sprint</label>
           <select name="sprint_id" class="form-control" onchange="this.form.submit()">
-            <option value="">Backlog (No sprint)</option>
+            <option value="">📦 Backlog (No sprint)</option>
             {% for s in sprints %}
-              <option value="{{ s.id }}" {% if issue.sprint.id == s.id %}selected{% endif %}>{{ s.name }} ({{ s.status }})</option>
+              <option value="{{ s.id }}" {% if issue.sprint.id == s.id %}selected{% endif %}>⚡ {{ s.name }} ({{ s.status }})</option>
             {% endfor %}
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Story Points</label>
-          <input type="number" name="story_points" class="form-control" value="{{ issue.story_points }}" min="1" max="21" onchange="this.form.submit()">
+        <!-- Story Points -->
+        <div class="sidebar-field-row">
+          <label class="sidebar-field-label">
+            <span>Story Points</span>
+            <span style="color:var(--accent-primary);font-weight:800;">{{ issue.story_points }} pts</span>
+          </label>
+          <div class="story-points-pill-group">
+            <div class="story-point-pill {% if issue.story_points == 1 %}active{% endif %}" data-points="1" onclick="SprintlyApp.setStoryPoints(1)">1</div>
+            <div class="story-point-pill {% if issue.story_points == 2 %}active{% endif %}" data-points="2" onclick="SprintlyApp.setStoryPoints(2)">2</div>
+            <div class="story-point-pill {% if issue.story_points == 3 %}active{% endif %}" data-points="3" onclick="SprintlyApp.setStoryPoints(3)">3</div>
+            <div class="story-point-pill {% if issue.story_points == 5 %}active{% endif %}" data-points="5" onclick="SprintlyApp.setStoryPoints(5)">5</div>
+            <div class="story-point-pill {% if issue.story_points == 8 %}active{% endif %}" data-points="8" onclick="SprintlyApp.setStoryPoints(8)">8</div>
+            <div class="story-point-pill {% if issue.story_points == 13 %}active{% endif %}" data-points="13" onclick="SprintlyApp.setStoryPoints(13)">13</div>
+            <div class="story-point-pill {% if issue.story_points == 21 %}active{% endif %}" data-points="21" onclick="SprintlyApp.setStoryPoints(21)">21</div>
+          </div>
+          <input type="hidden" name="story_points" id="sidebarStoryPoints" value="{{ issue.story_points }}">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Due Date</label>
+        <!-- Due Date -->
+        <div class="sidebar-field-row">
+          <label class="sidebar-field-label">Due Date</label>
           <input type="date" name="due_date" class="form-control" value="{{ issue.due_date|date:'Y-m-d' }}" onchange="this.form.submit()">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Reporter</label>
-          <div style="font-size:0.85rem;color:var(--text-primary);font-weight:700;">{{ issue.reporter.display_name|default:'System' }}</div>
+        <!-- Reporter & Timestamps -->
+        <div style="border-top:1px solid var(--border-subtle);padding-top:14px;margin-top:16px;display:flex;flex-direction:column;gap:8px;font-size:0.8rem;color:var(--text-muted);">
+          <div style="display:flex;justify-content:space-between;">
+            <span>Reporter:</span>
+            <strong style="color:var(--text-primary);">{{ issue.reporter.display_name|default:'System' }}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Created:</span>
+            <span>{{ issue.created_at|date:"M d, Y • H:i" }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span>Updated:</span>
+            <span>{{ issue.updated_at|date:"M d, Y • H:i" }}</span>
+          </div>
         </div>
 
-        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:16px;border-top:1px solid var(--border-subtle);padding-top:12px;">
-          <div>Created: {{ issue.created_at|date:"M d, Y • H:i" }}</div>
-          <div>Updated: {{ issue.updated_at|date:"M d, Y • H:i" }}</div>
+        <!-- Danger Zone: Delete Ticket Button -->
+        <div style="border-top:1px solid var(--border-subtle);padding-top:16px;margin-top:16px;">
+          <button type="button" class="btn-secondary" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.06);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;padding:8px 14px;" onclick="SprintlyApp.openDeleteIssueModal()" id="sidebarDeleteIssueBtn">
+            <i data-lucide="trash-2" style="width:15px;height:15px;"></i> Delete Ticket
+          </button>
         </div>
       </form>
     </div>
   </div>
 
 </div>
+
+<!-- Delete Issue Confirmation Modal -->
+<div id="deleteIssueModal" class="modal-overlay" onclick="if(event.target===this) SprintlyApp.closeDeleteIssueModal()">
+  <div class="modal-card" style="max-width:440px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(239,68,68,0.12);color:#ef4444;display:flex;align-items:center;justify-content:center;border:1px solid rgba(239,68,68,0.2);">
+          <i data-lucide="alert-triangle" style="width:20px;height:20px;"></i>
+        </div>
+        <h3 style="font-size:1.15rem;font-weight:800;color:var(--text-primary);margin:0;">Delete Issue</h3>
+      </div>
+      <button type="button" class="btn-icon" onclick="SprintlyApp.closeDeleteIssueModal()">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      </button>
+    </div>
+    <p style="color:var(--text-secondary);font-size:0.9rem;line-height:1.6;margin-bottom:20px;">
+      Are you sure you want to delete <strong style="color:var(--text-primary);">{{ issue.key }} — {{ issue.title }}</strong>? This action will permanently remove this issue, all subtasks, attachments, and comments. This cannot be undone.
+    </p>
+    <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <button type="button" class="btn-secondary" onclick="SprintlyApp.closeDeleteIssueModal()">Cancel</button>
+      <form method="POST" action="{% url 'issues:delete' issue.id %}" id="deleteIssueForm" onsubmit="event.preventDefault(); SprintlyApp.submitDeleteIssue({{ issue.id }});" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary" style="background:#dc2626;border-color:#dc2626;box-shadow:0 4px 12px rgba(220,38,38,0.35);" id="confirmDeleteBtn">
+          <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete Permanently
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleDescriptionEdit() {
+    const view = document.getElementById("descViewMode");
+    const form = document.getElementById("descEditForm");
+    const label = document.getElementById("descEditBtnLabel");
+    if (!view || !form) return;
+    if (form.style.display === "none") {
+      form.style.display = "block";
+      view.style.display = "none";
+      if (label) label.textContent = "Cancel";
+    } else {
+      form.style.display = "none";
+      view.style.display = "block";
+      if (label) label.textContent = "Edit";
+    }
+  }
+</script>
 {% endblock %}

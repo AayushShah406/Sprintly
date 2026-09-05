@@ -9,7 +9,7 @@ from accounts.models import User
 from projects.models import Project, ProjectMember
 from sprints.models import Sprint
 from issues.models import Issue, SubTask, Comment, IssueAttachment, IssueLink, IssueAuditLog
-from notifications.models import Notification, TeamRoom, ChatMessage
+from notifications.models import Notification
 from analytics.health_service import SprintHealthEngine
 from mongodb_engine.manager import mongo_manager
 
@@ -481,19 +481,6 @@ def seed_database():
         link="/issues/3/",
     )
     mongo_manager.sync_notification(n3)
-
-    # 8. Team Chat Rooms & Messages
-    r1, _ = TeamRoom.objects.get_or_create(project=p1, name="general-dev", defaults={"description": "Main engineering discussions and announcements"})
-    r2, _ = TeamRoom.objects.get_or_create(project=p1, name="sprint-planning", defaults={"description": "Backlog refinement, estimations, and sprint scope"})
-
-    cm1 = ChatMessage.objects.create(room=r1, author=alex, content="Welcome to the Sprintly engineering hub! Sprint 4 is underway.")
-    mongo_manager.insert_document("chat_messages", {"room": "general-dev", "author": alex.username, "content": cm1.content})
-
-    cm2 = ChatMessage.objects.create(room=r1, author=sarah, content="Backend API endpoints and project services are live and tested.")
-    mongo_manager.insert_document("chat_messages", {"room": "general-dev", "author": sarah.username, "content": cm2.content})
-
-    cm3 = ChatMessage.objects.create(room=r1, author=elena, content="Kanban board drag-and-drop is ready with instant persistence.")
-    mongo_manager.insert_document("chat_messages", {"room": "general-dev", "author": elena.username, "content": cm3.content})
 
     # Evaluate sprint 4 health so snapshot is stored in MongoDB
     SprintHealthEngine.evaluate_sprint(sprint4)
